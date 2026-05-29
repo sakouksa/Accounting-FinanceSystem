@@ -19,7 +19,7 @@ const MainLayout = () => {
 
   const { profile, permission } = profileStore()
 
-  const sidebarWidth = collapsed ? 60 : 220
+  const sidebarWidth = collapsed ? 70 : 230
 
   // =========================
   // PROTECT ROUTE

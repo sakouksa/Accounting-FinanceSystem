@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\AccountTypeController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
 // auth
@@ -44,6 +47,26 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('account-types', AccountTypeController::class);
     Route::post('/account-types/bulk-delete', [AccountTypeController::class, 'bulkDelete']);
     Route::post('/account-types/delete-all', [AccountTypeController::class, 'deleteAll']);
+    // end account types of chart of accounts
+    // audit logs
+    Route::get('/audit-logs', [AuditLogController::class, 'index']);
+    Route::get('/audit-logs/stats', [AuditLogController::class, 'stats']);
+    Route::get('/audit-logs/{id}', [AuditLogController::class, 'show']);
+    // end audit logs
+    // chart of accounts
+    Route::get('/chart-of-accounts/stats', [ChartOfAccountController::class, 'stats']);
+    Route::patch('/chart-of-accounts/{id}/status', [ChartOfAccountController::class, 'changeStatus']);
+    Route::apiResource('chart-of-accounts', ChartOfAccountController::class);
+    Route::post('/chart-of-accounts/bulk-delete', [ChartOfAccountController::class, 'bulkDelete']);
+    Route::post('/chart-of-accounts/delete-all', [ChartOfAccountController::class, 'deleteAll']);
+    // end chart of accounts
+    // transactions
+    Route::get('/transactions/stats', [TransactionController::class, 'stats']);
+    Route::patch('/transactions/{id}/status', [TransactionController::class, 'changeStatus']);
+    Route::apiResource('transactions', TransactionController::class);
+    Route::post('/transactions/bulk-delete', [TransactionController::class, 'bulkDelete']);
+    Route::post('/transactions/delete-all', [TransactionController::class, 'deleteAll']);
+    // end transactions
     //  logout
     Route::post('logout', [AuthController::class, 'logout']);
     // end logout

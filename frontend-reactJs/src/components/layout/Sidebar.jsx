@@ -44,14 +44,13 @@ const items_menu_left_tmp = [
     icon: <DashboardOutlined />,
     label: 'ផ្ទាំងគ្រប់គ្រង'
   },
-  //  ACCOUNTING
   {
-    key: 'coa_group',
+    key: 'accounting_core',
     icon: <BankOutlined />,
     label: 'គណនេយ្យស្នូល',
     children: [
       {
-        key: '/coa',
+        key: '/chart-of-accounts',
         icon: <ContainerOutlined />,
         label: 'តារាងគណនី'
       },
@@ -59,68 +58,23 @@ const items_menu_left_tmp = [
         key: '/account-types',
         icon: <BarChartOutlined />,
         label: 'ប្រភេទគណនី'
+      },
+      {
+        key: '/general-ledger',
+        icon: <BsJournalText />,
+        label: 'សៀវភៅធំ'
+      },
+      {
+        key: '/journal-entries',
+        icon: <TransactionOutlined />,
+        label: 'បញ្ជី Journal'
       }
     ]
   },
-
-  //  GL
   {
-    key: 'gl_group',
-    icon: <TransactionOutlined />,
-    label: 'ប្រតិបត្តិការ GL',
-    children: [
-      {
-        key: '/transactions',
-        icon: <HistoryOutlined />,
-        label: 'បញ្ជីប្រតិបត្តិការ'
-      },
-      {
-        key: '/transaction-details',
-        icon: <ContainerOutlined />,
-        label: 'Journal Details'
-      },
-      {
-        key: '/income',
-        icon: <ArrowUpOutlined />,
-        label: 'កត់ត្រាចំណូល'
-      },
-      {
-        key: '/expense',
-        icon: <ArrowDownOutlined />,
-        label: 'កត់ត្រាចំណាយ'
-      }
-    ]
-  },
-
-  //  DEBT
-  {
-    key: 'debt_group',
+    key: 'sales_receivable',
     icon: <WalletOutlined />,
-    label: 'បំណុល និង ការទូទាត់',
-    children: [
-      {
-        key: '/receivable',
-        icon: <SolutionOutlined />,
-        label: 'ប្រាក់ត្រូវទទួល'
-      },
-      {
-        key: '/payable',
-        icon: <SolutionOutlined />,
-        label: 'ប្រាក់ត្រូវបង់'
-      },
-      {
-        key: '/payments',
-        icon: <SafetyCertificateOutlined />,
-        label: 'ការទូទាត់'
-      }
-    ]
-  },
-
-  //  PARTNERS
-  {
-    key: 'partner_group',
-    icon: <TeamOutlined />,
-    label: 'ដៃគូពាណិជ្ជកម្ម',
+    label: 'ការលក់ និង ប្រាក់ត្រូវទទួល',
     children: [
       {
         key: '/customers',
@@ -128,80 +82,96 @@ const items_menu_left_tmp = [
         label: 'អតិថិជន'
       },
       {
-        key: '/suppliers',
-        icon: <TeamOutlined />,
-        label: 'អ្នកផ្គត់ផ្គង់'
+        key: '/accounts-receivable',
+        icon: <ArrowDownOutlined />,
+        label: 'ប្រាក់ត្រូវទទួល'
+      },
+      {
+        key: '/customer-payments',
+        icon: <MdOutlinePayments />,
+        label: 'ការទូទាត់ពីអតិថិជន'
       }
     ]
   },
 
-  //  FINANCE
   {
-    key: 'finance_group',
+    key: 'purchase_payable',
     icon: <WalletOutlined />,
-    label: 'ហិរញ្ញវត្ថុ',
+    label: 'ការទិញ និង ប្រាក់ត្រូវបង់',
     children: [
+      {
+        key: '/suppliers',
+        icon: <TeamOutlined />,
+        label: 'អ្នកផ្គត់ផ្គង់'
+      },
+      {
+        key: '/accounts-payable',
+        icon: <ArrowUpOutlined />,
+        label: 'ប្រាក់ត្រូវបង់'
+      },
+      {
+        key: '/supplier-payments',
+        icon: <MdOutlinePayments />,
+        label: 'ការទូទាត់ទៅអ្នកផ្គត់ផ្គង់'
+      }
+    ]
+  },
+
+  {
+    key: 'finance_management',
+    icon: <MdOutlineAccountBalance />,
+    label: 'ការគ្រប់គ្រងហិរញ្ញវត្ថុ',
+    children: [
+      {
+        key: '/cash-flows',
+        icon: <TransactionOutlined />,
+        label: 'លំហូរសាច់ប្រាក់'
+      },
       {
         key: '/budgets',
         icon: <WalletOutlined />,
         label: 'ថវិកា'
       },
       {
-        key: '/cash-flows',
-        icon: <TransactionOutlined />,
-        label: 'Cash Flow'
-      }
-    ]
-  },
-
-  //  REPORTS
-  {
-    key: 'report_group',
-    icon: <BarChartOutlined />,
-    label: 'របាយការណ៍',
-    children: [
-      {
         key: '/financial-reports',
         icon: <BarChartOutlined />,
         label: 'របាយការណ៍ហិរញ្ញវត្ថុ'
       },
       {
-        key: '/reports',
+        key: '/report-exports',
         icon: <AuditOutlined />,
-        label: 'Reports Export'
+        label: 'នាំចេញរបាយការណ៍'
       }
     ]
   },
 
-  //  SYSTEM
   {
-    key: 'system_group',
-    icon: <SettingOutlined />,
-    label: 'ប្រព័ន្ធ',
+    key: 'organization',
+    icon: <BankOutlined />,
+    label: 'អង្គភាព និង ប្រព័ន្ធ',
     children: [
       {
+        key: '/branches',
+        icon: <BankOutlined />,
+        label: 'សាខា'
+      },
+      {
         key: '/currencies',
-        icon: <BarChartOutlined />,
+        icon: <BsCalculator />,
         label: 'រូបិយប័ណ្ណ'
       },
       {
         key: '/payment-methods',
         icon: <TransactionOutlined />,
-        label: 'វិធីទូទាត់'
-      },
-      {
-        key: '/branches',
-        icon: <BankOutlined />,
-        label: 'សាខា'
+        label: 'វិធីសាស្ត្រទូទាត់'
       }
     ]
   },
 
-  //  SECURITY
   {
-    key: 'security_group',
+    key: 'security_access',
     icon: <LockOutlined />,
-    label: 'សុវត្ថិភាព',
+    label: 'សុវត្ថិភាព និង សិទ្ធិប្រើប្រាស់',
     children: [
       {
         key: '/users',
@@ -209,28 +179,27 @@ const items_menu_left_tmp = [
         label: 'អ្នកប្រើប្រាស់'
       },
       {
-        key: '/role',
+        key: '/roles',
         icon: <SafetyCertificateOutlined />,
         label: 'តួនាទី'
       },
       {
         key: '/permissions',
-        icon: <LockOutlined />,
-        label: 'សិទ្ធិប្រើប្រាស់'
+        icon: <KeyOutlined />,
+        label: 'សិទ្ធិ'
       },
       {
         key: '/role-permissions',
-        icon: <KeyOutlined />,
-        label: 'Role Permissions'
+        icon: <FileProtectOutlined />,
+        label: 'សិទ្ធិតាមតួនាទី'
       }
     ]
   },
 
-  //  LOGS
   {
-    key: 'logs_group',
+    key: 'audit_activity',
     icon: <HistoryOutlined />,
-    label: 'Audit & Logs',
+    label: 'កំណត់ហេតុ និង សកម្មភាព',
     children: [
       {
         key: '/audit-logs',
@@ -240,15 +209,15 @@ const items_menu_left_tmp = [
       {
         key: '/login-histories',
         icon: <LoginOutlined />,
-        label: 'Login Histories'
+        label: 'ប្រវត្តិការចូលប្រើ'
       }
     ]
   },
 
-  //  SETTINGS
   {
     type: 'divider'
   },
+
   {
     key: '/settings',
     icon: <SettingOutlined />,
@@ -286,7 +255,7 @@ const Sidebar = ({ collapsed, isDarkMode }) => {
       trigger={null}
       collapsible
       collapsed={collapsed}
-      width={240}
+      width={250}
       theme={isDarkMode ? 'dark' : 'light'}
       className={`fixed h-screen left-0 top-0 z-[1001] border-r transition-all duration-300 flex flex-col ${
         isDarkMode

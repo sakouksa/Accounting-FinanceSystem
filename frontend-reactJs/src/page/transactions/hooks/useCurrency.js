@@ -1,46 +1,28 @@
 import React from 'react'
-import {
-  useState,
-  useEffect
-} from 'react'
-import {
-  message,
-  Modal
-} from 'antd'
-import {
-  ExclamationCircleFilled
-} from '@ant-design/icons'
-import {
-  request
-} from '../../../util/request'
-import {
-  usePaginationStore
-} from '../../../store/usePaginationStore'
+import { useState, useEffect } from 'react'
+import { message, Modal } from 'antd'
+import { ExclamationCircleFilled } from '@ant-design/icons'
+import { request } from '../../../util/request'
+import { usePaginationStore } from '../../../store/usePaginationStore'
 
-export const useAccountType = () => {
+export const useCurrency = () => {
   const [state, setState] = useState({
     list: [],
     stats: [],
     loading: false,
     open: false,
-    editingAccountType: null
+    editingCurrency: null
   })
 
-  const {
-    pagination,
-    setPagination,
-    resetPagination
-  } = usePaginationStore()
+  const { pagination, setPagination, resetPagination } = usePaginationStore()
   const [selectedRowKeys, setSelectedRowKeys] = useState([])
 
   const getStats = async () => {
-    const res = await request('account-types/stats', 'get')
-    if (res && !res.error) {
-      setState(prev => ({
-        ...prev,
-        stats: res?.stats || []
-      }))
-    }
+    const res = await request('currencies/stats', 'get')
+    setState(prev => ({
+      ...prev,
+      stats: res?.stats || []
+    }))
   }
 
   const getList = async (filter = pagination) => {
@@ -52,11 +34,11 @@ export const useAccountType = () => {
     let query = `?page=${filter.page || 1}&limit=${filter.limit || 10}`
     if (filter.txt_search)
       query += `&txt_search=${encodeURIComponent(filter.txt_search)}`
+    if (filter.status) query += `&status=${filter.status}`
 
-    const res = await request(`account-types${query}`, 'get')
+    const res = await request(`currencies${query}`, 'get')
 
-    // កែសម្រួលលក្ខខណ្ឌ៖ ប្រើ !res.error ជំនួស !res.errors
-    if (res && !res.error) {
+    if (res && !res.errors) {
       setState(prev => ({
         ...prev,
         list: res.list || [],
@@ -70,11 +52,34 @@ export const useAccountType = () => {
         ...prev,
         loading: false
       }))
-      // កែសម្រួល៖ ទាញយកសារពី res.errors.message
-      message.error(res?.errors?.message || 'ទាញទិន្នន័យបរាជ័យ')
+      message.error(res?.message || 'ទាញទិន្នន័យបរាជ័យ')
     }
   }
 
+  const handleStatusChange = async (id, status) => {
+    setState(prev => ({
+      ...prev,
+      loading: true
+    }))
+
+    const res = await request(`currencies/${id}/status`, 'patch', {
+      status
+    })
+
+    if (res && !res.error) {
+      message.success(res.message || 'ប្តូរស្ថានភាពជោគជ័យ')
+      await Promise.all([getList(), getStats()])
+    } else {
+      message.error(res?.message || 'បរាជ័យ')
+      await getList()
+    }
+
+    setState(prev => ({
+      ...prev,
+      loading: false
+    }))
+  }
+  // SINGLE DELETE (CONFIRM)
   const handleDelete = (record) => {
     Modal.confirm({
       title: 'បញ្ជាក់ការលុប',
@@ -83,27 +88,30 @@ export const useAccountType = () => {
           color: '#ff4d4f'
         }
       }),
-      content: 'តើអ្នកពិតជាចង់លុបប្រភេទគណនីនេះមែនទេ?',
+      content: 'តើអ្នកពិតជាចង់លុបរូបិយប័ណ្ណនេះមែនទេ?',
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
       centered: true,
+
       onOk: async () => {
-        const res = await request(`account-types/${record.id}`, 'delete')
+        const res = await request(`currencies/${record.id}`, 'delete')
+
         if (res && !res.error) {
           message.success(res.message || 'លុបជោគជ័យ!')
           getList()
           getStats()
         } else {
-          // កែសម្រួល៖ ទាញយកសារពី res.errors.message
-          message.error(res?.errors?.message || 'លុបមិនបាន!')
+          message.error(res?.message || 'លុបមិនបាន!')
         }
       }
     })
   }
 
+  // BULK DELETE (CONFIRM)
   const handleBulkDelete = () => {
     if (selectedRowKeys.length === 0) return
+
     Modal.confirm({
       title: 'បញ្ជាក់ការលុបជាច្រើន',
       icon: React.createElement(ExclamationCircleFilled, {
@@ -111,27 +119,28 @@ export const useAccountType = () => {
           color: '#ff4d4f'
         }
       }),
-      content: `តើអ្នកពិតជាចង់លុប ${selectedRowKeys.length} ប្រភេទគណនីមែនទេ?`,
+      content: `តើអ្នកពិតជាចង់លុប ${selectedRowKeys.length} រូបិយប័ណ្ណមែនទេ?`,
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
       centered: true,
+
       onOk: async () => {
-        const res = await request('account-types/bulk-delete', 'post', {
+        const res = await request('currencies/bulk-delete', 'post', {
           ids: selectedRowKeys
         })
+
         if (res && !res.error) {
           message.success(res.message || 'លុបជោគជ័យ!')
           setSelectedRowKeys([])
           getList()
           getStats()
         } else {
-          message.error(res?.errors?.message || 'លុបមិនបាន!')
+          message.error(res?.message || 'លុបមិនបាន!')
         }
       }
     })
   }
-
   const handleDeleteAll = () => {
     Modal.confirm({
       title: 'បញ្ជាក់ការលុបទាំងអស់',
@@ -140,25 +149,27 @@ export const useAccountType = () => {
           color: '#ff4d4f'
         }
       }),
-      content: 'តើអ្នកពិតជាចង់លុបប្រភេទគណនីទាំងអស់មែនទេ?',
+      content: 'តើអ្នកពិតជាចង់លុបទិន្នន័យទាំងអស់មែនទេ?',
+
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
       centered: true,
+
       onOk: async () => {
-        const res = await request('account-types/delete-all', 'post')
+        const res = await request('currencies/delete-all', 'post')
+
         if (res && !res.error) {
           message.success(res.message || 'លុបទាំងអស់ជោគជ័យ!')
           setSelectedRowKeys([])
           getList()
           getStats()
         } else {
-          message.error(res?.errors?.message || 'លុបទាំងអស់មិនបាន!')
+          message.error(res?.message || 'លុបទាំងអស់មិនបាន!')
         }
       }
     })
   }
-
   useEffect(() => {
     getList()
     getStats()
@@ -174,8 +185,9 @@ export const useAccountType = () => {
     resetPagination,
     getList,
     getStats,
-    handleBulkDelete,
+    handleStatusChange,
     handleDelete,
+    handleBulkDelete,
     handleDeleteAll
   }
 }

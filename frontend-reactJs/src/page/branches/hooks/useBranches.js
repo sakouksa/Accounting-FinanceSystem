@@ -18,17 +18,13 @@ export const useBranches = () => {
 
   const getStats = async () => {
     const res = await request('branches/stats', 'get')
-    setState(prev => ({
-      ...prev,
-      stats: res?.stats || []
-    }))
+    if (res && !res.error) {
+      setState(prev => ({ ...prev, stats: res?.stats || [] }))
+    }
   }
 
   const getList = async (filter = pagination) => {
-    setState(prev => ({
-      ...prev,
-      loading: true
-    }))
+    setState(prev => ({ ...prev, loading: true }))
 
     let query = `?page=${filter.page}&limit=${filter.limit}`
     if (filter.txt_search) query += `&txt_search=${filter.txt_search}`
@@ -36,7 +32,7 @@ export const useBranches = () => {
 
     const res = await request(`branches${query}`, 'get')
 
-    if (res && !res.errors) {
+    if (res && !res.error) {
       setState(prev => ({
         ...prev,
         list: res.list || [],
@@ -46,37 +42,28 @@ export const useBranches = () => {
         total: res.total || 0
       })
     } else {
-      setState(prev => ({
-        ...prev,
-        loading: false
-      }))
-      message.error(res?.message || 'ទាញទិន្នន័យបរាជ័យ')
+      setState(prev => ({ ...prev, loading: false }))
+      message.error(res?.errors?.message || 'ទាញទិន្នន័យបរាជ័យ')
     }
   }
+
   // ================== CHANGE STATUS ==================
   const handleStatusChange = async (id, status) => {
-      setState(prev => ({
-          ...prev,
-          loading: true
-      }))
+    setState(prev => ({ ...prev, loading: true }))
 
-      const res = await request(`branches/${id}/status`, 'patch', {
-          status
-      })
+    const res = await request(`branches/${id}/status`, 'patch', { status })
 
-      if (res && !res.error) {
-          message.success(res.message || 'ប្តូរស្ថានភាពជោគជ័យ')
-          await Promise.all([getList(), getStats()])
-      } else {
-          message.error(res?.message || 'ប្តូរស្ថានភាពបរាជ័យ')
-          await getList() // Refresh ដើម្បី revert UI
-      }
+    if (res && !res.error) {
+      message.success(res.message || 'ប្តូរស្ថានភាពជោគជ័យ')
+      await Promise.all([getList(), getStats()])
+    } else {
+      message.error(res?.errors?.message || 'ប្តូរស្ថានភាពបរាជ័យ')
+      await getList() 
+    }
 
-      setState(prev => ({
-          ...prev,
-          loading: false
-      }))
+    setState(prev => ({ ...prev, loading: false }))
   }
+
   useEffect(() => {
     getList()
     getStats()

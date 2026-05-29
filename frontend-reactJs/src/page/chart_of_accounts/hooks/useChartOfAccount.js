@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   useState,
   useEffect
@@ -16,14 +15,15 @@ import {
 import {
   usePaginationStore
 } from '../../../store/usePaginationStore'
+import React from 'react'
 
-export const useAccountType = () => {
+export const useChartOfAccount = () => {
   const [state, setState] = useState({
     list: [],
     stats: [],
     loading: false,
     open: false,
-    editingAccountType: null
+    editingChartOfAccount: null
   })
 
   const {
@@ -34,7 +34,7 @@ export const useAccountType = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([])
 
   const getStats = async () => {
-    const res = await request('account-types/stats', 'get')
+    const res = await request('chart-of-accounts/stats', 'get')
     if (res && !res.error) {
       setState(prev => ({
         ...prev,
@@ -43,23 +43,25 @@ export const useAccountType = () => {
     }
   }
 
-  const getList = async (filter = pagination) => {
+  const getList = async (param_filter = {}) => {
     setState(prev => ({
       ...prev,
       loading: true
     }))
 
-    let query = `?page=${filter.page || 1}&limit=${filter.limit || 10}`
-    if (filter.txt_search)
-      query += `&txt_search=${encodeURIComponent(filter.txt_search)}`
+    let query = '?page=1'
+    if (param_filter.txt_search) query += `&txt_search=${encodeURIComponent(param_filter.txt_search)}`
+    if (param_filter.status) query += `&status=${param_filter.status}`
+    if (param_filter.account_type_id) query += `&account_type_id=${param_filter.account_type_id}`
+    if (param_filter.parent_account_id) query += `&parent_account_id=${param_filter.parent_account_id}`
 
-    const res = await request(`account-types${query}`, 'get')
+    const res = await request(`chart-of-accounts${query}`, 'get')
 
-    // កែសម្រួលលក្ខខណ្ឌ៖ ប្រើ !res.error ជំនួស !res.errors
     if (res && !res.error) {
       setState(prev => ({
         ...prev,
         list: res.list || [],
+        account_types: res.account_types || [],
         loading: false
       }))
       setPagination({
@@ -70,12 +72,33 @@ export const useAccountType = () => {
         ...prev,
         loading: false
       }))
-      // កែសម្រួល៖ ទាញយកសារពី res.errors.message
       message.error(res?.errors?.message || 'ទាញទិន្នន័យបរាជ័យ')
     }
   }
 
-  const handleDelete = (record) => {
+  const handleStatusChange = async (id, status) => {
+    setState(prev => ({
+      ...prev,
+      loading: true
+    }))
+    const res = await request(`chart-of-accounts/${id}/status`, 'patch', {
+      status
+    })
+
+    if (res && !res.error) {
+      message.success(res.message || 'ប្តូរស្ថានភាពជោគជ័យ')
+      await Promise.all([getList(), getStats()])
+    } else {
+      message.error(res?.errors?.message || 'បរាជ័យ')
+      await getList()
+    }
+    setState(prev => ({
+      ...prev,
+      loading: false
+    }))
+  }
+
+  const handleDelete = record => {
     Modal.confirm({
       title: 'បញ្ជាក់ការលុប',
       icon: React.createElement(ExclamationCircleFilled, {
@@ -83,19 +106,18 @@ export const useAccountType = () => {
           color: '#ff4d4f'
         }
       }),
-      content: 'តើអ្នកពិតជាចង់លុបប្រភេទគណនីនេះមែនទេ?',
+      content: 'តើអ្នកពិតជាចង់លុបគណនីនេះមែនទេ?',
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
       centered: true,
       onOk: async () => {
-        const res = await request(`account-types/${record.id}`, 'delete')
+        const res = await request(`chart-of-accounts/${record.id}`, 'delete')
         if (res && !res.error) {
           message.success(res.message || 'លុបជោគជ័យ!')
           getList()
           getStats()
         } else {
-          // កែសម្រួល៖ ទាញយកសារពី res.errors.message
           message.error(res?.errors?.message || 'លុបមិនបាន!')
         }
       }
@@ -111,13 +133,13 @@ export const useAccountType = () => {
           color: '#ff4d4f'
         }
       }),
-      content: `តើអ្នកពិតជាចង់លុប ${selectedRowKeys.length} ប្រភេទគណនីមែនទេ?`,
+      content: `តើអ្នកពិតជាចង់លុប ${selectedRowKeys.length} គណនីមែនទេ?`,
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
       centered: true,
       onOk: async () => {
-        const res = await request('account-types/bulk-delete', 'post', {
+        const res = await request('chart-of-accounts/bulk-delete', 'post', {
           ids: selectedRowKeys
         })
         if (res && !res.error) {
@@ -140,20 +162,20 @@ export const useAccountType = () => {
           color: '#ff4d4f'
         }
       }),
-      content: 'តើអ្នកពិតជាចង់លុបប្រភេទគណនីទាំងអស់មែនទេ?',
+      content: 'តើអ្នកពិតជាចង់លុបគណនីទាំងអស់មែនទេ?',
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
       centered: true,
       onOk: async () => {
-        const res = await request('account-types/delete-all', 'post')
+        const res = await request('chart-of-accounts/delete-all', 'post')
         if (res && !res.error) {
           message.success(res.message || 'លុបទាំងអស់ជោគជ័យ!')
           setSelectedRowKeys([])
           getList()
           getStats()
         } else {
-          message.error(res?.errors?.message || 'លុបទាំងអស់មិនបាន!')
+          message.error(res?.errors?.message || 'លុបមិនបាន!')
         }
       }
     })
@@ -174,8 +196,9 @@ export const useAccountType = () => {
     resetPagination,
     getList,
     getStats,
-    handleBulkDelete,
+    handleStatusChange,
     handleDelete,
+    handleBulkDelete,
     handleDeleteAll
   }
 }

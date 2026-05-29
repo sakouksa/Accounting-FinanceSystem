@@ -1,9 +1,21 @@
 import React from 'react'
-import { useState, useEffect } from 'react'
-import { message, Modal } from 'antd'
-import { ExclamationCircleFilled } from '@ant-design/icons'
-import { request } from '../../../util/request'
-import { usePaginationStore } from '../../../store/usePaginationStore'
+import {
+  useState,
+  useEffect
+} from 'react'
+import {
+  message,
+  Modal
+} from 'antd'
+import {
+  ExclamationCircleFilled
+} from '@ant-design/icons'
+import {
+  request
+} from '../../../util/request'
+import {
+  usePaginationStore
+} from '../../../store/usePaginationStore'
 
 export const usePaymentMethod = () => {
   const [state, setState] = useState({
@@ -14,15 +26,21 @@ export const usePaymentMethod = () => {
     editingPaymentMethod: null
   })
 
-  const { pagination, setPagination, resetPagination } = usePaginationStore()
+  const {
+    pagination,
+    setPagination,
+    resetPagination
+  } = usePaginationStore()
   const [selectedRowKeys, setSelectedRowKeys] = useState([])
 
   const getStats = async () => {
     const res = await request('payment-methods/stats', 'get')
-    setState(prev => ({
-      ...prev,
-      stats: res?.stats || []
-    }))
+    if (res && !res.error) {
+      setState(prev => ({
+        ...prev,
+        stats: res?.stats || []
+      }))
+    }
   }
 
   const getList = async (filter = pagination) => {
@@ -38,7 +56,7 @@ export const usePaymentMethod = () => {
 
     const res = await request(`payment-methods${query}`, 'get')
 
-    if (res && !res.errors) {
+    if (res && !res.error) {
       setState(prev => ({
         ...prev,
         list: res.list || [],
@@ -52,7 +70,7 @@ export const usePaymentMethod = () => {
         ...prev,
         loading: false
       }))
-      message.error(res?.message || 'ទាញទិន្នន័យបរាជ័យ')
+      message.error(res?.errors?.message || 'ទាញទិន្នន័យបរាជ័យ')
     }
   }
 
@@ -70,7 +88,7 @@ export const usePaymentMethod = () => {
       message.success(res.message || 'ប្តូរស្ថានភាពជោគជ័យ')
       await Promise.all([getList(), getStats()])
     } else {
-      message.error(res?.message || 'បរាជ័យ')
+      message.error(res?.errors?.message || 'បរាជ័យ')
       await getList()
     }
 
@@ -79,7 +97,7 @@ export const usePaymentMethod = () => {
       loading: false
     }))
   }
-  // SINGLE DELETE (CONFIRM)
+
   const handleDelete = (record) => {
     Modal.confirm({
       title: 'បញ្ជាក់ការលុប',
@@ -88,7 +106,7 @@ export const usePaymentMethod = () => {
           color: '#ff4d4f'
         }
       }),
-      content: 'តើអ្នកពិតជាចង់លុបរូបិយប័ណ្ណនេះមែនទេ?',
+      content: 'តើអ្នកពិតជាចង់លុបវិធីសាស្ត្រទូទាត់នេះមែនទេ?',
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
@@ -96,19 +114,17 @@ export const usePaymentMethod = () => {
 
       onOk: async () => {
         const res = await request(`payment-methods/${record.id}`, 'delete')
-
         if (res && !res.error) {
           message.success(res.message || 'លុបជោគជ័យ!')
           getList()
           getStats()
         } else {
-          message.error(res?.message || 'លុបមិនបាន!')
+          message.error(res?.errors?.message || 'លុបមិនបាន!')
         }
       }
     })
   }
 
-  // BULK DELETE (CONFIRM)
   const handleBulkDelete = () => {
     if (selectedRowKeys.length === 0) return
 
@@ -119,7 +135,7 @@ export const usePaymentMethod = () => {
           color: '#ff4d4f'
         }
       }),
-      content: `តើអ្នកពិតជាចង់លុប ${selectedRowKeys.length} រូបិយប័ណ្ណមែនទេ?`,
+      content: `តើអ្នកពិតជាចង់លុប ${selectedRowKeys.length} វិធីសាស្ត្រទូទាត់មែនទេ?`,
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
@@ -129,18 +145,18 @@ export const usePaymentMethod = () => {
         const res = await request('payment-methods/bulk-delete', 'post', {
           ids: selectedRowKeys
         })
-
         if (res && !res.error) {
           message.success(res.message || 'លុបជោគជ័យ!')
           setSelectedRowKeys([])
           getList()
           getStats()
         } else {
-          message.error(res?.message || 'លុបមិនបាន!')
+          message.error(res?.errors?.message || 'លុបមិនបាន!')
         }
       }
     })
   }
+
   const handleDeleteAll = () => {
     Modal.confirm({
       title: 'បញ្ជាក់ការលុបទាំងអស់',
@@ -150,7 +166,6 @@ export const usePaymentMethod = () => {
         }
       }),
       content: 'តើអ្នកពិតជាចង់លុបទិន្នន័យទាំងអស់មែនទេ?',
-
       okText: 'លុបចេញ',
       okType: 'danger',
       cancelText: 'បោះបង់',
@@ -158,18 +173,18 @@ export const usePaymentMethod = () => {
 
       onOk: async () => {
         const res = await request('payment-methods/delete-all', 'post')
-
         if (res && !res.error) {
           message.success(res.message || 'លុបទាំងអស់ជោគជ័យ!')
           setSelectedRowKeys([])
           getList()
           getStats()
         } else {
-          message.error(res?.message || 'លុបទាំងអស់មិនបាន!')
+          message.error(res?.errors?.message || 'លុបទាំងអស់មិនបាន!')
         }
       }
     })
   }
+
   useEffect(() => {
     getList()
     getStats()

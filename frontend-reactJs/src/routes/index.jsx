@@ -17,6 +17,8 @@ import PaymentMethod from '../page/paymentmethod/PaymentMethodPage';
 // Layout
 import MainLayout from '../components/layout/MainLayout';
 import AccountTypePage from '../page/account_types/AccountTypePage';
+import AuditLogPage from '../page/auditlog/AuditLogPage';
+import ChartOfAccountPage from '../page/chart_of_accounts/ChartOfAccountPage';
 
 const ProtectedRoutes = () => (
   <MainLayout>
@@ -42,6 +44,8 @@ const AppRoutes = () => {
         <Route path="/currencies" element={<CurrencyPage />} />
         <Route path="/payment-methods" element={<PaymentMethod />} />
         <Route path="/account-types" element={<AccountTypePage />} />
+        <Route path="/audit-logs" element={<AuditLogPage />} />
+        <Route path="/chart-of-accounts" element={<ChartOfAccountPage />} />
         <Route path="/500" element={<Error500 />} />
       </Route>
 
