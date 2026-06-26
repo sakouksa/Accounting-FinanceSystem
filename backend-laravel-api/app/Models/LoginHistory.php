@@ -6,12 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class LoginHistory extends Model
 {
+    public $timestamps = false;
+
     protected $fillable = [
         'user_id',
         'ip_address',
         'user_agent',
         'login_at',
-        'logout_at'
+        'logout_at',
+    ];
+
+    protected $casts = [
+        'login_at' => 'datetime',
+        'logout_at' => 'datetime',
     ];
 
     public function user()

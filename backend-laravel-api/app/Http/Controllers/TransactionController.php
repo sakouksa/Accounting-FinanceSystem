@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TransactionRequest;
+use App\Models\Branch;
 use App\Models\Transaction;
+use App\Models\TransactionType;
 use Illuminate\Http\Request;
 
 class TransactionController extends Controller
@@ -11,15 +13,22 @@ class TransactionController extends Controller
     public function index(Request $request)
     {
         try {
+
             $query = Transaction::query();
 
             if ($request->filled('txt_search')) {
+
                 $search = trim($request->txt_search);
 
                 $query->where(function ($q) use ($search) {
+
                     $q->where('transaction_no', 'LIKE', "%{$search}%")
-                        ->orWhere('transaction_type', 'LIKE', "%{$search}%")
-                        ->orWhere('description', 'LIKE', "%{$search}%");
+                        ->orWhere('description', 'LIKE', "%{$search}%")
+                        ->orWhereHas('transactionType', function ($qq) use ($search) {
+
+                            $qq->where('name', 'LIKE', "%{$search}%")
+                                ->orWhere('code', 'LIKE', "%{$search}%");
+                        });
                 });
             }
 
@@ -35,8 +44,8 @@ class TransactionController extends Controller
                 $query->where('currency_code', $request->currency_code);
             }
 
-            if ($request->filled('transaction_type')) {
-                $query->where('transaction_type', $request->transaction_type);
+            if ($request->filled('transaction_type_id')) {
+                $query->where('transaction_type_id', $request->transaction_type_id);
             }
 
             $perPage = $request->get('limit', 20);
@@ -44,6 +53,7 @@ class TransactionController extends Controller
             $list = $query->with([
                 'branch',
                 'details',
+                'transactionType',
             ])
                 ->orderBy('id', 'desc')
                 ->paginate($perPage);
@@ -51,6 +61,16 @@ class TransactionController extends Controller
             return response()->json([
                 'list' => $list->items(),
                 'total' => $list->total(),
+                'branches' => Branch::select(
+                    'id',
+                    'name'
+                )->get(),
+
+                'transaction_types' => TransactionType::select(
+                    'id',
+                    'name',
+                    'code'
+                )->get(),
             ]);
         } catch (\Exception $e) {
 
@@ -66,24 +86,28 @@ class TransactionController extends Controller
     public function stats()
     {
         $stats = [
+
             [
                 'title' => 'ប្រតិបត្តិការសរុប',
                 'value' => Transaction::count(),
                 'color' => '#6366f1',
                 'icon' => 'DatabaseOutlined',
             ],
+
             [
                 'title' => 'រង់ចាំ',
                 'value' => Transaction::where('status', 'Pending')->count(),
                 'color' => '#f59e0b',
                 'icon' => 'ClockCircleOutlined',
             ],
+
             [
                 'title' => 'អនុម័ត',
                 'value' => Transaction::where('status', 'Approved')->count(),
                 'color' => '#10b981',
                 'icon' => 'CheckCircleOutlined',
             ],
+
             [
                 'title' => 'បង្កើតថ្ងៃនេះ',
                 'value' => Transaction::whereDate('created_at', today())->count(),
@@ -104,10 +128,13 @@ class TransactionController extends Controller
             $transaction = Transaction::create($request->validated());
 
             return response()->json([
+
                 'data' => $transaction->load([
                     'branch',
                     'details',
+                    'transactionType',
                 ]),
+
                 'message' => 'បានបង្កើតប្រតិបត្តិការជោគជ័យ',
             ]);
         } catch (\Exception $e) {
@@ -128,6 +155,7 @@ class TransactionController extends Controller
             $transaction = Transaction::with([
                 'branch',
                 'details',
+                'transactionType',
             ])->findOrFail($id);
 
             return response()->json([
@@ -151,10 +179,13 @@ class TransactionController extends Controller
             $transaction->update($request->validated());
 
             return response()->json([
+
                 'data' => $transaction->load([
                     'branch',
                     'details',
+                    'transactionType',
                 ]),
+
                 'message' => 'បានកែប្រែប្រតិបត្តិការជោគជ័យ',
             ]);
         } catch (\Exception $e) {
@@ -173,6 +204,7 @@ class TransactionController extends Controller
         $transaction = Transaction::find($id);
 
         if (! $transaction) {
+
             return response()->json([
                 'error' => true,
                 'message' => 'រកមិនឃើញប្រតិបត្តិការ',
@@ -183,31 +215,6 @@ class TransactionController extends Controller
 
         return response()->json([
             'message' => 'លុបជោគជ័យ',
-        ]);
-    }
-
-    public function changeStatus(Request $request, $id)
-    {
-        $transaction = Transaction::find($id);
-
-        if (! $transaction) {
-            return response()->json([
-                'error' => true,
-                'message' => 'រកមិនឃើញប្រតិបត្តិការ',
-            ]);
-        }
-
-        $transaction->status = $request->status;
-
-        if ($request->status == 'Approved') {
-            $transaction->approved_by = auth()->id();
-            $transaction->approved_at = now();
-        }
-
-        $transaction->save();
-
-        return response()->json([
-            'message' => 'ប្តូរស្ថានភាពជោគជ័យ',
         ]);
     }
 

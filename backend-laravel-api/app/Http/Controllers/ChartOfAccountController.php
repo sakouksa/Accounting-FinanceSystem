@@ -44,6 +44,7 @@ class ChartOfAccountController extends Controller
                 'list' => $list->items(),
                 'total' => $list->total(),
                 'account_types' => AccountType::select('id as account_type_id', 'name', 'code')->get(),
+                'parent_accounts' => ChartOfAccount::select('id as parent_account_id', 'account_name')->get(),
             ]);
         } catch (\Exception $e) {
             \Log::error('ChartOfAccount Error: '.$e->getMessage());
@@ -89,7 +90,19 @@ class ChartOfAccountController extends Controller
 
     public function store(ChartOfAccountRequest $request)
     {
-        $account = ChartOfAccount::create($request->validated());
+        $data = $request->validated();
+
+        // force safe casting (important for INSERT)
+        $data['is_system'] = (bool) ($data['is_system'] ?? false);
+        $data['allow_transaction'] = (bool) ($data['allow_transaction'] ?? true);
+
+        $data['opening_balance'] = (float) ($data['opening_balance'] ?? 0);
+        $data['current_balance'] = (float) ($data['current_balance'] ?? 0);
+        $data['account_level'] = (int) ($data['account_level'] ?? 1);
+
+        $data['parent_account_id'] = $data['parent_account_id'] ?? null;
+
+        $account = ChartOfAccount::create($data);
 
         return response()->json([
             'data' => $account->load(['accountType', 'parent']),
@@ -101,18 +114,22 @@ class ChartOfAccountController extends Controller
     {
         try {
             $account = ChartOfAccount::findOrFail($id);
-            $account->update($request->validated());
+
+            $data = $request->validated();
+
+            $data['is_system'] = (bool) ($data['is_system'] ?? false);
+            $data['allow_transaction'] = (bool) ($data['allow_transaction'] ?? true);
+
+            $account->update($data);
 
             return response()->json([
                 'data' => $account->load(['accountType', 'parent']),
-                'message' => 'បានកែប្រែគណនីដោយជោគជ័យ',
+                'message' => 'កែប្រែជោគជ័យ',
             ]);
         } catch (\Exception $e) {
-            \Log::error('Update ChartOfAccount Error: '.$e->getMessage());
-
             return response()->json([
                 'errors' => true,
-                'message' => 'កែប្រែមិនបានជោគជ័យ: '.$e->getMessage(),
+                'message' => 'កែប្រែបរាជ័យ',
             ], 500);
         }
     }

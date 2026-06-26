@@ -12,7 +12,7 @@ class CheckPermission
     {
         $user = JWTAuth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -20,9 +20,9 @@ class CheckPermission
 
         $hasPermission = collect($permissions)->contains('code', $permission);
 
-        if (!$hasPermission) {
+        if (! $hasPermission) {
             return response()->json([
-                'message' => 'Forbidden - No Permission'
+                'message' => 'Forbidden - No Permission',
             ], 403);
         }
 

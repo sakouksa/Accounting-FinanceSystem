@@ -1,14 +1,28 @@
 <?php
 
+use App\Http\Controllers\AccountsPayableController;
+use App\Http\Controllers\AccountsReceivableController;
 use App\Http\Controllers\AccountTypeController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\CurrencyController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\FinancialReportController;
+use App\Http\Controllers\LoginHistoryController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentMethodController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\TransactionDetailController;
+use App\Http\Controllers\TransactionTypeController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // auth
@@ -17,8 +31,15 @@ Route::post('login', [AuthController::class, 'login']);
 // end auth
 // middleware auth:api
 Route::middleware('auth:api')->group(function () {
+    // profile
+    Route::get('profile/getProfile', [ProfileController::class, 'profile']);
+    Route::get('/profile/dashboard-stats', [ProfileController::class, 'dashboardStats']);
+    Route::post('profile/update', [ProfileController::class, 'update']);
+    Route::put('/change-password', [ProfileController::class, 'changePassword']);
+    // end profile
     // roles
-    Route::get('/roles/stats', [RoleController::class, 'stats']);
+    Route::get('roles/stats', [RoleController::class, 'stats']);
+    Route::get('permissions', [RoleController::class, 'getAllPermissionsList']); // បន្ថែម Route នេះ
     Route::apiResource('roles', RoleController::class);
     // end roles
     // branches
@@ -62,13 +83,99 @@ Route::middleware('auth:api')->group(function () {
     // end chart of accounts
     // transactions
     Route::get('/transactions/stats', [TransactionController::class, 'stats']);
-    Route::patch('/transactions/{id}/status', [TransactionController::class, 'changeStatus']);
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/bulk-delete', [TransactionController::class, 'bulkDelete']);
     Route::post('/transactions/delete-all', [TransactionController::class, 'deleteAll']);
     // end transactions
+    // transaction types
+    Route::get('/transaction-types/stats', [TransactionTypeController::class, 'stats']);
+    Route::patch('/transaction-types/{id}/status', [TransactionTypeController::class, 'changeStatus']);
+    Route::apiResource('transaction-types', TransactionTypeController::class);
+    Route::post('/transaction-types/bulk-delete', [TransactionTypeController::class, 'bulkDelete']);
+    Route::post('/transaction-types/delete-all', [TransactionTypeController::class, 'deleteAll']);
+    // end transaction types
+    // transaction Details
+    Route::get('/transaction-details/stats', [TransactionDetailController::class, 'stats']);
+    Route::get('/transaction-details/{id}', [TransactionDetailController::class, 'show']);
+    Route::apiResource('transaction-details', TransactionDetailController::class);
+    Route::post('/transaction-details/bulk-delete', [TransactionDetailController::class, 'bulkDelete']);
+    Route::post('/transaction-details/delete-all', [TransactionDetailController::class, 'deleteAll']);
+    // end transaction Details
+    // customers
+    Route::get('/customers/stats', [CustomerController::class, 'stats']);
+    Route::patch('/customers/{id}/status', [CustomerController::class, 'changeStatus']);
+    Route::apiResource('customers', CustomerController::class);
+    Route::post('/customers/bulk-delete', [CustomerController::class, 'bulkDelete']);
+    Route::post('/customers/delete-all', [CustomerController::class, 'deleteAll']);
+    // end customers
+    // suppliers
+    Route::get('/suppliers/stats', [SupplierController::class, 'stats']);
+    Route::patch('/suppliers/{id}/status', [SupplierController::class, 'changeStatus']);
+    Route::apiResource('suppliers', SupplierController::class);
+    Route::post('/suppliers/bulk-delete', [SupplierController::class, 'bulkDelete']);
+    Route::post('/suppliers/delete-all', [SupplierController::class, 'deleteAll']);
+    // end suppliers
+    // Accounts Receivable
+    Route::get('/accounts-receivable/stats', [AccountsReceivableController::class, 'stats']);
+    Route::patch('/accounts-receivable/{id}/status', [AccountsReceivableController::class, 'changeStatus']);
+    Route::apiResource('accounts-receivable', AccountsReceivableController::class);
+    Route::post('/accounts-receivable/bulk-delete', [AccountsReceivableController::class, 'bulkDelete']);
+    Route::post('/accounts-receivable/delete-all', [AccountsReceivableController::class, 'deleteAll']);
+    // end Accounts Receivable
+    // Accounts Payable
+    Route::get('/accounts-payable/stats', [AccountsPayableController::class, 'stats']);
+    Route::patch('/accounts-payable/{id}/status', [AccountsPayableController::class, 'changeStatus']);
+    Route::apiResource('accounts-payable', AccountsPayableController::class);
+    Route::post('/accounts-payable/bulk-delete', [AccountsPayableController::class, 'bulkDelete']);
+    Route::post('/accounts-payable/delete-all', [AccountsPayableController::class, 'deleteAll']);
+    // end Accounts Payable
+    // Payment
+    Route::get('/payments/stats', [PaymentController::class, 'stats']);
+    Route::patch('/payments/{id}/status', [PaymentController::class, 'changeStatus']);
+    Route::apiResource('payments', PaymentController::class);
+    Route::post('/payments/bulk-delete', [PaymentController::class, 'bulkDelete']);
+    Route::post('/payments/delete-all', [PaymentController::class, 'deleteAll']);
+    // end Payment
+    // CashFlow
+    Route::get('/cashflow/stats', [CashFlowController::class, 'stats']);
+    Route::patch('/cashflow/{id}/status', [CashFlowController::class, 'changeStatus']);
+    Route::apiResource('cashflow', CashFlowController::class);
+    Route::post('/cashflow/bulk-delete', [CashFlowController::class, 'bulkDelete']);
+    Route::post('/cashflow/delete-all', [CashFlowController::class, 'deleteAll']);
+    // end CashFlow
+    // Financial Report
+    Route::get('financial-reports/stats', [FinancialReportController::class, 'getStats']);
+    Route::get('/financial-reports/preview', [FinancialReportController::class, 'preview']);
+    Route::post('/financial-reports/bulk-delete', [FinancialReportController::class, 'bulkDelete']);
+    Route::post('/financial-reports/delete-all', [FinancialReportController::class, 'deleteAll']); // Added missing route
+    Route::apiResource('financial-reports', FinancialReportController::class);
+    // end Financial Report
+    // Report
+    Route::get('reports/stats', [ReportController::class, 'getStats']); // Placed above resource to avoid id collision
+    Route::get('/reports/preview', [ReportController::class, 'preview']);
+    Route::post('/reports/bulk-delete', [ReportController::class, 'bulkDelete']);
+    Route::post('/reports/delete-all', [ReportController::class, 'deleteAll']);
+    Route::apiResource('reports', ReportController::class);
+    // end Report
+    // login histories
+    Route::get('/login-histories', [LoginHistoryController::class, 'index']);
+    Route::get('/login-histories/stats', [LoginHistoryController::class, 'stats']);
+    // optional if you want detail view later
+    // Route::get('/login-histories/{id}', [LoginHistoryController::class, 'show']);
+    // end login histories
+    // home
+    Route::get('/dashboard', [HomeController::class, 'dashboard']);
+    //end home
+    // Permission Routes
+    Route::get('/default-roles', [UserController::class, 'getDefaultRoles']);
+    Route::get('/permissions', [UserController::class, 'getAllPermissions']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{user}', [UserController::class, 'update']);
+    Route::get('/branches-list', [UserController::class, 'getBranches']);
     //  logout
     Route::post('logout', [AuthController::class, 'logout']);
     // end logout
     // end middleware auth:api
 });
+Route::post('/forgot-password', [ProfileController::class, 'forgotPassword']);
+Route::post('/reset-password', [ProfileController::class, 'resetPassword']);

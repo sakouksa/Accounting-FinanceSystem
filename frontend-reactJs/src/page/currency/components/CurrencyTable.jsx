@@ -198,7 +198,6 @@ columns={[
             if (pagination.onChange) pagination.onChange(page, pageSize)
           }}
           showSizeChanger
-          pageSizeOptions={['10', '20', '50', '100']}
         />
       </div>
     </>

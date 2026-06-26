@@ -23,8 +23,9 @@ const getBase64 = file =>
 
 const RegisterPage = () => {
   const navigate = useNavigate()
+  const [form] = Form.useForm()
   const [fileList, setFileList] = useState([])
-  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
 
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewImage, setPreviewImage] = useState('')
@@ -49,42 +50,55 @@ const RegisterPage = () => {
   }
 
   const onFinish = async values => {
+    setLoading(true)
     try {
-      const formData = new FormData();
+      const formData = new FormData()
 
-      formData.append('full_name', values.full_name);
-      formData.append('gender', values.gender || '');
-      formData.append('phone', values.phone);
-      formData.append('email', values.email);
-      formData.append('username', values.username || '');
-      formData.append('password', values.password);
-      formData.append(
-        'password_confirmation',
-        values.password_confirmation
-      );
+      formData.append('full_name', values.full_name)
+      formData.append('gender', values.gender || '')
+      formData.append('phone', values.phone)
+      formData.append('email', values.email)
+      formData.append('username', values.username || '')
+      formData.append('password', values.password)
+      formData.append('password_confirmation', values.password_confirmation)
 
-      if (fileList.length > 0) {
-        formData.append(
-          'profile_image',
-          fileList[0].originFileObj
-        );
+      if (fileList.length > 0 && fileList[0].originFileObj) {
+        formData.append('profile_image', fileList[0].originFileObj)
       }
 
-      const res = await request('register', 'post', formData);
+      const res = await request('register', 'post', formData)
 
-      if (!res.error) {
-        message.success('ការចុះឈ្មោះបានជោគជ័យ!');
-        navigate('/login');
-      } else {
-        setErrors(res.errors || {});
-        message.error(res.errors?.message || 'មានបញ្ហា!');
+      if (res && !res.error) {
+        message.success(res.message || 'ការចុះឈ្មោះបានជោគជ័យ!')
+        navigate('/login')
+        return
+      }
+
+      // Error Handling
+      if (res?.error) {
+        const validationErrors = res.validationErrors || res.errors?.validation || res.errors || {}
+
+        if (Object.keys(validationErrors).length > 0) {
+          const fieldErrors = Object.keys(validationErrors).map(field => ({
+            name: field,
+            errors: Array.isArray(validationErrors[field])
+              ? validationErrors[field]
+              : [validationErrors[field]]
+          }))
+
+          form.setFields(fieldErrors)
+        }
+
+        message.error(res.errors?.message || 'សូមពិនិត្យទិន្នន័យឡើងវិញ!')
       }
     } catch (err) {
-      console.log(err);
-
-      message.error('Server Error');
+      console.error('Register Error:', err)
+      message.error('មានបញ្ហាក្នុងការចុះឈ្មោះ!')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
+
   return (
     <div className='min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8'>
       <div className='sm:mx-auto sm:w-full sm:max-w-xl'>
@@ -99,81 +113,35 @@ const RegisterPage = () => {
       <div className='mt-8 sm:mx-auto sm:w-full sm:max-w-xl'>
         <div className='bg-white py-8 px-6 shadow sm:rounded-lg sm:px-10 border border-gray-200'>
           <Form
+            form={form}
             name='register'
             onFinish={onFinish}
             layout='vertical'
             requiredMark='optional'
           >
-            {/* Full Name + Email */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-x-4'>
-              <Form.Item
-                name='full_name'
-                label='ឈ្មោះពេញ'
-                rules={[
-                  {
-                    required: true,
-                    message: 'សូមបញ្ចូលឈ្មោះ!'
-                  }
-                ]}
-              >
-                <Input
-                  prefix={<UserOutlined />}
-                  placeholder='ឈ្មោះពេញ'
-                  size='large'
-                />
+              <Form.Item name='full_name' label='ឈ្មោះពេញ' rules={[{ required: true, message: 'សូមបញ្ចូលឈ្មោះ!' }]}>
+                <Input prefix={<UserOutlined />} placeholder='ឈ្មោះពេញ' size='large' />
               </Form.Item>
 
-              <Form.Item
-                name='email'
-                label='អ៊ីមែល'
-                rules={[
-                  {
-                    required: true,
-                    message: 'សូមបញ្ចូលអ៊ីមែល!'
-                  },
-                  {
-                    type: 'email',
-                    message: 'អ៊ីមែលមិនត្រឹមត្រូវ!'
-                  }
-                ]}
-              >
-                <Input
-                  prefix={<MailOutlined />}
-                  placeholder='អ៊ីមែល'
-                  size='large'
-                />
+              <Form.Item name='email' label='អ៊ីមែល' rules={[
+                { required: true, message: 'សូមបញ្ចូលអ៊ីមែល!' },
+                { type: 'email', message: 'អ៊ីមែលមិនត្រឹមត្រូវ!' }
+              ]}>
+                <Input prefix={<MailOutlined />} placeholder='អ៊ីមែល' size='large' />
               </Form.Item>
             </div>
 
-            {/* Phone + Username */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-x-4'>
-              <Form.Item
-                name='phone'
-                label='លេខទូរស័ព្ទ'
-                rules={[
-                  {
-                    required: true,
-                    message: 'សូមបញ្ចូលលេខទូរស័ព្ទ!'
-                  }
-                ]}
-              >
-                <Input
-                  prefix={<PhoneOutlined />}
-                  placeholder='012345678'
-                  size='large'
-                />
+              <Form.Item name='phone' label='លេខទូរស័ព្ទ' rules={[{ required: true, message: 'សូមបញ្ចូលលេខទូរស័ព្ទ!' }]}>
+                <Input prefix={<PhoneOutlined />} placeholder='012345678' size='large' />
               </Form.Item>
 
               <Form.Item name='username' label='ឈ្មោះគណនី'>
-                <Input
-                  prefix={<UserOutlined />}
-                  placeholder='username'
-                  size='large'
-                />
+                <Input prefix={<UserOutlined />} placeholder='username' size='large' />
               </Form.Item>
             </div>
 
-            {/* Gender */}
             <Form.Item name='gender' label='ភេទ'>
               <Select size='large' placeholder='ជ្រើសរើសភេទ'>
                 <Option value='male'>ប្រុស</Option>
@@ -181,23 +149,9 @@ const RegisterPage = () => {
               </Select>
             </Form.Item>
 
-            {/* Password */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-x-4'>
-              <Form.Item
-                name='password'
-                label='លេខសម្ងាត់'
-                rules={[
-                  {
-                    required: true,
-                    message: 'សូមបញ្ចូលលេខសម្ងាត់!'
-                  }
-                ]}
-              >
-                <Input.Password
-                  prefix={<LockOutlined />}
-                  placeholder='លេខសម្ងាត់'
-                  size='large'
-                />
+              <Form.Item name='password' label='លេខសម្ងាត់' rules={[{ required: true, message: 'សូមបញ្ចូលលេខសម្ងាត់!' }]}>
+                <Input.Password prefix={<LockOutlined />} placeholder='លេខសម្ងាត់' size='large' />
               </Form.Item>
 
               <Form.Item
@@ -205,43 +159,23 @@ const RegisterPage = () => {
                 label='បញ្ជាក់លេខសម្ងាត់'
                 dependencies={['password']}
                 rules={[
-                  {
-                    required: true,
-                    message: 'សូមបញ្ជាក់លេខសម្ងាត់!'
-                  },
-
+                  { required: true, message: 'សូមបញ្ជាក់លេខសម្ងាត់!' },
                   ({ getFieldValue }) => ({
-                    validator (_, value) {
-                      if (!value || getFieldValue('password') === value) {
-                        return Promise.resolve()
-                      }
-
-                      return Promise.reject(
-                        new Error('លេខសម្ងាត់មិនត្រូវគ្នា!')
-                      )
+                    validator(_, value) {
+                      if (!value || getFieldValue('password') === value) return Promise.resolve()
+                      return Promise.reject(new Error('លេខសម្ងាត់មិនត្រូវគ្នា!'))
                     }
                   })
                 ]}
               >
-                <Input.Password
-                  prefix={<LockOutlined />}
-                  placeholder='បញ្ជាក់លេខសម្ងាត់'
-                  size='large'
-                />
+                <Input.Password prefix={<LockOutlined />} placeholder='បញ្ជាក់លេខសម្ងាត់' size='large' />
               </Form.Item>
             </div>
 
-            {/* Address */}
             <Form.Item name='address' label='អាសយដ្ឋាន'>
-              <TextArea
-                rows={3}
-                placeholder='ភូមិ/ឃុំ/ស្រុក/ខេត្ត'
-                maxLength={200}
-                showCount
-              />
+              <TextArea rows={3} placeholder='ភូមិ/ឃុំ/ស្រុក/ខេត្ត' maxLength={200} showCount />
             </Form.Item>
 
-            {/* Upload Image */}
             <Form.Item label='រូបភាពគណនី'>
               <Upload
                 customRequest={({ onSuccess }) => onSuccess('ok')}
@@ -252,30 +186,15 @@ const RegisterPage = () => {
               >
                 {fileList.length >= 1 ? null : uploadButton}
               </Upload>
-
-              {previewImage && (
-                <Image
-                  wrapperStyle={{
-                    display: 'none'
-                  }}
-                  preview={{
-                    visible: previewOpen,
-                    onVisibleChange: visible => setPreviewOpen(visible),
-
-                    afterOpenChange: visible => !visible && setPreviewImage('')
-                  }}
-                  src={previewImage}
-                />
-              )}
             </Form.Item>
 
-            {/* Submit */}
             <Form.Item className='mt-6 mb-0'>
               <Button
                 type='primary'
                 htmlType='submit'
                 size='large'
                 block
+                loading={loading}
                 className='bg-indigo-600 hover:bg-indigo-700 border-none h-11'
               >
                 ចុះឈ្មោះឥឡូវនេះ
@@ -283,10 +202,7 @@ const RegisterPage = () => {
 
               <div className='mt-6 text-center text-sm text-gray-600'>
                 មានគណនីរួចហើយមែនទេ?{' '}
-                <Link
-                  to='/login'
-                  className='font-medium text-indigo-600 hover:text-indigo-500'
-                >
+                <Link to='/login' className='font-medium text-indigo-600 hover:text-indigo-500'>
                   ចូលប្រើប្រាស់
                 </Link>
               </div>

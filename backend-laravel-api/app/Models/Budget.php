@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Budget extends Model
 {
+    protected $table = 'budgets';
+
     protected $fillable = [
         'budget_name',
         'fiscal_year',
@@ -17,16 +19,16 @@ class Budget extends Model
         'start_date',
         'end_date',
         'status',
-        'created_by'
+        'created_by',
     ];
-
-    public function account()
-    {
-        return $this->belongsTo(ChartOfAccount::class);
-    }
 
     public function branch()
     {
-        return $this->belongsTo(Branch::class);
+        return $this->belongsTo(Branch::class, 'branch_id', 'id');
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'account_id', 'id');
     }
 }

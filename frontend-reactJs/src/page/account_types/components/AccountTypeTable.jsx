@@ -3,6 +3,7 @@ import { CiEdit } from 'react-icons/ci'
 import { MdDelete } from 'react-icons/md'
 import { dateClient } from '../../../util/helper'
 import { request } from '../../../util/request'
+import CustomEmpty from '../../../components/common/CustomEmpty'
 
 const { Text } = Typography
 
@@ -13,6 +14,7 @@ function AccountTypeTable ({
   pagination,
   onEdit,
   onDelete,
+  setPagination,
   onBulkDelete,
   onStatusChange,
   onDeleteAll,
@@ -83,7 +85,18 @@ function AccountTypeTable ({
         rowKey='id'
         scroll={{ x: 900 }}
         pagination={false}
-        loading={loading}
+        locale = {
+          {
+            emptyText: ( <
+              CustomEmpty title = 'មិនមានប្រភេទគណនី'
+              description = 'បង្កើតប្រភេទគណនីថ្មី ដើម្បីចាប់ផ្តើមកត់ត្រាប្រតិបត្តិការ'
+              onReload = {
+                () => window.location.reload()
+              }
+              />
+            )
+          }
+        }
         columns={[
           {
             title: 'ឈ្មោះប្រភេទគណនី',
@@ -177,16 +190,14 @@ function AccountTypeTable ({
           សរុប: <b className='text-indigo-600'>{pagination.total || 0}</b>{' '}
           ទិន្នន័យ
         </span>
+
         <Pagination
           current={pagination.page}
           pageSize={pagination.limit}
           total={pagination.total}
           onChange={(page, pageSize) => {
-            if (pagination.onChange) pagination.onChange(page, pageSize)
+            setPagination({ page, limit: pageSize })
           }}
-        
-          showSizeChanger
-          pageSizeOptions={['10', '20', '50', '100']}
         />
       </div>
     </>

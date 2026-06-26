@@ -26,7 +26,15 @@ function AccountTypePage () {
   const handleOpenModal = () => {
     setState(prev => ({ ...prev, open: true, editingAccountType: null }))
   }
-
+  const handleReset = () => {
+    resetPagination()
+    getList({
+      page: 1,
+      limit: 10,
+      txt_search: ''
+    })
+    getStats()
+  }
   const handleEdit = record => {
     setState(prev => ({
       ...prev,
@@ -59,6 +67,7 @@ function AccountTypePage () {
           onDelete={handleDelete}
           onDeleteAll={handleDeleteAll}
           onBulkDelete={handleBulkDelete}
+          setPagination={setPagination}
         />
         <AccountTypeModal
           open={state.open}

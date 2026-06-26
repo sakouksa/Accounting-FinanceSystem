@@ -46,4 +46,10 @@ class ChartOfAccount extends Model
     {
         return $this->belongsTo(ChartOfAccount::class, 'parent_account_id', 'id');
     }
+
+    // relation has many  cash Flows
+    public function cashFlows()
+    {
+        return $this->hasMany(CashFlow::class, 'account_id');
+    }
 }

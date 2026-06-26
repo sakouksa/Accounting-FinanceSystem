@@ -43,25 +43,27 @@ export const useAccountType = () => {
     }
   }
 
-  const getList = async (filter = pagination) => {
+  const getList = async (custom = pagination) => {
     setState(prev => ({
       ...prev,
       loading: true
     }))
 
-    let query = `?page=${filter.page || 1}&limit=${filter.limit || 10}`
-    if (filter.txt_search)
-      query += `&txt_search=${encodeURIComponent(filter.txt_search)}`
+    let query = `?page=${custom.page || 1}&limit=${custom.limit || 10}`
+
+    if (custom.txt_search?.trim()) {
+      query += `&txt_search=${encodeURIComponent(custom.txt_search)}`
+    }
 
     const res = await request(`account-types${query}`, 'get')
 
-    // កែសម្រួលលក្ខខណ្ឌ៖ ប្រើ !res.error ជំនួស !res.errors
     if (res && !res.error) {
       setState(prev => ({
         ...prev,
         list: res.list || [],
         loading: false
       }))
+
       setPagination({
         total: res.total || 0
       })
@@ -70,7 +72,7 @@ export const useAccountType = () => {
         ...prev,
         loading: false
       }))
-      // កែសម្រួល៖ ទាញយកសារពី res.errors.message
+
       message.error(res?.errors?.message || 'ទាញទិន្នន័យបរាជ័យ')
     }
   }
@@ -162,7 +164,7 @@ export const useAccountType = () => {
   useEffect(() => {
     getList()
     getStats()
-  }, [])
+  }, [pagination.page, pagination.limit])
 
   return {
     state,

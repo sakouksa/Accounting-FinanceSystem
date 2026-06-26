@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
@@ -22,7 +22,7 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'profile_image',
         'last_login_at',
-        'status'
+        'status',
     ];
 
     protected $hidden = [
@@ -68,4 +68,22 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Branch::class);
     }
 
+    // relation to payment method
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'recorded_by');
+    }
+
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions'); // បើមាន pivot table ដោយឡែក
+    }
+    public function getAllPermissionsAttribute()
+    {
+        $rolePermissions = $this->role ? $this->role->permissions : collect();
+
+        $userPermissions = $this->permissions;
+
+        return $rolePermissions->merge($userPermissions)->unique('id');
+    }
 }

@@ -15,7 +15,7 @@ return new class extends Migration
 
             $table->enum('payment_type', [
                 'payable',
-                'receivable'
+                'receivable',
             ]);
 
             $table->foreignId('payable_id')
@@ -32,7 +32,7 @@ return new class extends Migration
                 'cash',
                 'bank',
                 'qr',
-                'card'
+                'card',
             ]);
 
             $table->string('currency_code', 10)->default('USD');
@@ -50,7 +50,7 @@ return new class extends Migration
             $table->enum('status', [
                 'pending',
                 'completed',
-                'cancelled'
+                'cancelled',
             ])->default('pending');
 
             $table->foreignId('recorded_by')

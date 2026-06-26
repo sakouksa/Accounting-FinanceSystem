@@ -14,7 +14,7 @@ return new class extends Migration
             $table->enum('report_type', [
                 'balance_sheet',
                 'profit_loss',
-                'cash_flow'
+                'cash_flow',
             ]);
 
             $table->foreignId('branch_id')

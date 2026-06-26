@@ -27,11 +27,13 @@ class AccountTypeController extends Controller
             });
         }
 
-        $list = $query->orderBy('id', 'desc')->get();
+        $limit = $request->get('limit', 10);
+
+        $paginator = $query->orderBy('id', 'desc')->paginate($limit);
 
         return response()->json([
-            'list' => $list,
-            'total' => $list->count(),
+            'list' => $paginator->items(),
+            'total' => $paginator->total(),
         ]);
     }
 

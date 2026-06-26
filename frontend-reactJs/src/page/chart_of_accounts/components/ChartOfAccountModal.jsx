@@ -20,52 +20,24 @@ function ChartOfAccountModal ({
   open,
   setState,
   editingChartOfAccount,
-  onSuccess
+  onSuccess,
+  accountTypes,
+  parentAccounts
 }) {
   const [form] = Form.useForm()
-  const [accountTypes, setAccountTypes] = useState([])
-  const [parentAccounts, setParentAccounts] = useState([])
+
   const [loadingTypes, setLoadingTypes] = useState(false)
   const [loadingParents, setLoadingParents] = useState(false)
-
-  // Fetch Account Types
-  const fetchAccountTypes = async () => {
-    setLoadingTypes(true)
-    const res = await request('account-types', 'get')
-    if (res && res.list) {
-      setAccountTypes(res.list)
-    }
-    setLoadingTypes(false)
-  }
-
-  // Fetch Parent Accounts (គណនីមេ)
-  const fetchParentAccounts = async () => {
-    setLoadingParents(true)
-    const res = await request('chart-of-accounts', 'get') // ទាញទាំងអស់
-    if (res && res.list) {
-      setParentAccounts(res.list)
-    }
-    setLoadingParents(false)
-  }
 
   const fillEditData = () => {
     if (editingChartOfAccount) {
       form.setFieldsValue({
-        id: editingChartOfAccount.id,
-        account_type_id: editingChartOfAccount.account_type_id,
-        parent_account_id: editingChartOfAccount.parent_account_id,
-        account_code: editingChartOfAccount.account_code,
-        account_name: editingChartOfAccount.account_name,
-        account_level: editingChartOfAccount.account_level || 1,
-        normal_balance: editingChartOfAccount.normal_balance,
-        opening_balance: editingChartOfAccount.opening_balance || 0,
-        current_balance: editingChartOfAccount.current_balance || 0,
-        currency_code: editingChartOfAccount.currency_code || 'USD',
+        ...editingChartOfAccount,
+        //convert boolean to switch value
         is_system: !!editingChartOfAccount.is_system,
         allow_transaction: !!editingChartOfAccount.allow_transaction,
-        description: editingChartOfAccount.description || '',
-        status: editingChartOfAccount.status || 'Active'
       })
+      // data static from API, so we need to set it manually
     } else {
       form.resetFields()
       form.setFieldsValue({
@@ -80,13 +52,6 @@ function ChartOfAccountModal ({
       })
     }
   }
-
-  useEffect(() => {
-    if (open) {
-      fetchAccountTypes()
-      fetchParentAccounts()
-    }
-  }, [open])
 
   useEffect(() => {
     fillEditData()
@@ -107,22 +72,45 @@ function ChartOfAccountModal ({
         method = 'put'
       }
 
-      const res = await request(url, method, values)
+      const payload = {
+        ...values,
+        parent_account_id: values.parent_account_id ? Number(values.parent_account_id) : null,
+      }
 
-      if (res && !res.errors) {
-        message.success(
-          res.message || (values.id ? 'កែប្រែជោគជ័យ!' : 'បង្កើតជោគជ័យ!')
-        )
+      const res = await request(url, method, payload)
+
+      // SUCCESS
+      if (!res?.error) {
+        message.success(res.message || 'ជោគជ័យ!')
         handleClose()
         onSuccess()
-      } else {
-        message.error(res?.message || 'បរាជ័យ!')
+        return
       }
+
+      // VALIDATION ERROR
+      if (res?.errors) {
+        const fieldErrors = []
+
+        Object.keys(res.errors).forEach(key => {
+          if (key !== 'message') {
+            fieldErrors.push({
+              name: key,
+              errors: [res.errors[key].help]
+            })
+          }
+        })
+
+        form.setFields(fieldErrors)
+
+        message.error(res.errors.message || 'Validation error')
+        return
+      }
+
+      message.error(res?.errors?.message || 'បរាជ័យ!')
     } catch (error) {
-      message.error('មានបញ្ហាក្នុងការទាក់ទង Server')
+      message.error('បញ្ហាបច្ចេកទេសបានកើតឡើង 500!')
     }
   }
-
   return (
     <Modal
       title={editingChartOfAccount ? 'កែប្រែគណនី' : 'បង្កើតគណនីថ្មី'}
@@ -147,26 +135,24 @@ function ChartOfAccountModal ({
             >
               <Select
                 placeholder='ជ្រើសរើសប្រភេទគណនី'
-                loading={loadingTypes}
                 options={accountTypes.map(item => ({
                   label: `${item.name} (${item.code || ''})`,
-                  value: item.id // ← ប្តូរទៅ item.id
+                  value: item.account_type_id
                 }))}
               />
             </Form.Item>
           </Col>
 
           <Col xs={24} sm={12}>
-            <Form.Item label='គណនីមេ' name='parent_account_id'>
+          <Form.Item label='គណនីមេ' name='parent_account_id'>
               <Select
                 placeholder='ជ្រើសរើសគណនីមេ (Optional)'
                 allowClear
-                loading={loadingParents}
                 options={parentAccounts
-                  .filter(item => item.id !== editingChartOfAccount?.id) // កុំឱ្យជ្រើសខ្លួនឯង
+                  .filter(item => item.parent_account_id !== editingChartOfAccount?.id)
                   .map(item => ({
-                    label: `${item.account_code} - ${item.account_name}`,
-                    value: item.id
+                    label: item.account_name,
+                    value: item.parent_account_id
                   }))}
               />
             </Form.Item>
@@ -248,6 +234,10 @@ function ChartOfAccountModal ({
               <Switch
                 checkedChildren='អនុញ្ញាត'
                 unCheckedChildren='មិនអនុញ្ញាត'
+                className='
+      !bg-red-500
+      [&.ant-switch-checked]:!bg-blue-600
+    '
               />
             </Form.Item>
           </Col>
@@ -257,7 +247,14 @@ function ChartOfAccountModal ({
               label='ជាគណនីប្រព័ន្ធ'
               valuePropName='checked'
             >
-              <Switch checkedChildren='បាទ' unCheckedChildren='ទេ' />
+              <Switch
+                checkedChildren='បាទ'
+                unCheckedChildren='ទេ'
+                className='
+      !bg-red-500
+      [&.ant-switch-checked]:!bg-blue-600
+    '
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -282,7 +279,7 @@ function ChartOfAccountModal ({
             <Button onClick={handleClose}>បោះបង់</Button>
             <Button
               type='primary'
-              className = 'bg-blue-600 hover:!bg-blue-700 border-none rounded-lg shadow-sm'
+              className='bg-blue-600 hover:!bg-blue-700 border-none rounded-lg shadow-sm'
               htmlType='submit'
               icon={
                 form.getFieldValue('id') ? <BiSolidEditAlt /> : <RiSave3Fill />

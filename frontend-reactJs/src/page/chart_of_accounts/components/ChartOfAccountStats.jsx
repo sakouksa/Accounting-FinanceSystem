@@ -18,28 +18,34 @@ const iconMap = {
   CalendarOutlined: <CalendarOutlined />
 }
 
-function ChartOfAccountStats ({ stats }) {
+function ChartOfAccountStats({ stats }) {
   return (
     <Row gutter={[16, 16]}>
-      {stats.map((item, index) => (
+      {stats?.map((item, index) => (
         <Col xs={24} sm={12} lg={6} key={index}>
           <Card
-            className='rounded-2xl border-none shadow-sm overflow-hidden relative hover:shadow-lg transition-all duration-300'
+            bordered={false}
+            className='rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden relative'
             bodyStyle={{ padding: 20 }}
           >
-            <div className='flex justify-between items-start'>
+            <div className='flex items-start justify-between'>
+              {/* Left */}
               <div>
-                <Text type='secondary' className='text-xs font-medium'>
+                <Text className='text-gray-500 text-sm font-medium'>
                   {item.title}
                 </Text>
 
-                <AntTitle level={3} className='m-0 mt-1 font-bold'>
-                  {item.value}
+                <AntTitle
+                  level={3}
+                  className='!mb-0 !mt-2 font-bold'
+                >
+                  {Number(item.value || 0).toLocaleString()}
                 </AntTitle>
               </div>
 
+              {/* Right Icon */}
               <div
-                className='p-3 rounded-xl bg-gray-50 text-xl'
+                className='w-14 h-14 rounded-2xl flex items-center justify-center text-2xl'
                 style={{
                   color: item.color,
                   backgroundColor: `${item.color}15`
@@ -49,7 +55,7 @@ function ChartOfAccountStats ({ stats }) {
               </div>
             </div>
 
-            {/* Bottom Gradient */}
+            {/* Footer Line */}
             <div
               className='absolute bottom-0 left-0 h-1 w-full'
               style={{

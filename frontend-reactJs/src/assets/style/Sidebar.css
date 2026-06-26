@@ -1,0 +1,82 @@
+.custom-sidebar-scroll::-webkit-scrollbar {
+    width: 3px !important;
+}
+
+.custom-sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+.custom-sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-radius: 10px !important;
+}
+
+.custom-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15) !important;
+}
+
+.custom-sidebar .ant-menu-item-group-title {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+    font-weight: 700 !important;
+    color: #94a3b8 !important;
+    padding: 20px 12px 8px 24px !important;
+}
+
+.custom-sidebar .ant-menu-item,
+.custom-sidebar .ant-menu-submenu-title {
+    height: 42px !important;
+    line-height: 42px !important;
+    margin-bottom: 4px !important;
+    padding-left: 20px !important;
+    color: #64748b !important;
+    width: calc(100% - 16px) !important;
+    margin-left: 8px !important;
+    margin-right: 8px !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease;
+}
+
+.custom-sidebar.ant-menu-light .ant-menu-item-selected {
+    background-color: #f0fdf4 !important;
+    color: #10b981 !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    position: relative;
+}
+
+.custom-sidebar.ant-menu-light .ant-menu-submenu-active>.ant-menu-submenu-title,
+.custom-sidebar.ant-menu-light .ant-menu-submenu-open>.ant-menu-submenu-title,
+.custom-sidebar.ant-menu-light .ant-menu-submenu-selected>.ant-menu-submenu-title {
+    background-color: #f0fdf4 !important;
+    color: #10b981 !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    position: relative;
+}
+
+.custom-sidebar.ant-menu-light .ant-menu-item-selected::before,
+.custom-sidebar.ant-menu-light .ant-menu-submenu-open>.ant-menu-submenu-title::before,
+.custom-sidebar.ant-menu-light .ant-menu-submenu-selected>.ant-menu-submenu-title::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3.5px;
+    background-color: #10b981 !important;
+    border-top-left-radius: 8px !important;
+    border-bottom-left-radius: 8px !important;
+    border-top-right-radius: 0px !important;
+    border-bottom-right-radius: 0px !important;
+}
+
+.ant-menu-inline .ant-menu-item::after,
+.ant-menu-vertical .ant-menu-item::after {
+    display: none !important;
+}
+
+.custom-sidebar.ant-menu-inline {
+    border-inline-end: none !important;
+}

@@ -1,4 +1,3 @@
-```php
 <?php
 
 namespace App\Http\Controllers;
@@ -8,173 +7,85 @@ use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
 {
-    // LIST AUDIT LOGS
-    public function index(Request $req)
+    public function index(Request $request)
     {
-        $query = AuditLog::with('user');
+        $query = AuditLog::with(['user' => function ($q) {
+            $q->select('id', 'full_name', 'username');
+        }]);
 
         // SEARCH
-        if ($req->filled('txt_search')) {
-
-            $search = $req->txt_search;
+        if ($request->filled('txt_search')) {
+            $search = $request->txt_search;
 
             $query->where(function ($q) use ($search) {
-
                 $q->where('action_type', 'LIKE', "%{$search}%")
                     ->orWhere('module', 'LIKE', "%{$search}%")
                     ->orWhere('table_name', 'LIKE', "%{$search}%")
-                    ->orWhere('ip_address', 'LIKE', "%{$search}%");
+                    ->orWhere('ip_address', 'LIKE', "%{$search}%")
+                    ->orWhereHas('user', function ($u) use ($search) {
+                        $u->where('full_name', 'LIKE', "%{$search}%")
+                            ->orWhere('username', 'LIKE', "%{$search}%");
+                    });
             });
         }
 
-        // FILTER ACTION TYPE
-        if ($req->filled('action_type')) {
-
-            $query->where(
-                'action_type',
-                $req->action_type
-            );
+        // FILTERS
+        if ($request->filled('action_type')) {
+            $query->where('action_type', $request->action_type);
         }
 
-        // FILTER MODULE
-        if ($req->filled('module')) {
-
-            $query->where(
-                'module',
-                $req->module
-            );
-        }
-        // FILTER TABLE
-
-        if ($req->filled('table_name')) {
-
-            $query->where(
-                'table_name',
-                $req->table_name
-            );
+        if ($request->filled('module')) {
+            $query->where('module', $request->module);
         }
 
-        // FILTER USER
-        if ($req->filled('user_id')) {
-
-            $query->where(
-                'user_id',
-                $req->user_id
-            );
-        }
-        // FILTER DATE RANGE
-        if ($req->filled('start_date')) {
-
-            $query->whereDate(
-                'created_at',
-                '>=',
-                $req->start_date
-            );
+        if ($request->filled('table_name')) {
+            $query->where('table_name', $request->table_name);
         }
 
-        if ($req->filled('end_date')) {
-
-            $query->whereDate(
-                'created_at',
-                '<=',
-                $req->end_date
-            );
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
         }
-        // PAGINATION
-        $list = $query
-            ->latest()
-            ->paginate(
-                $req->per_page ?? 10
-            );
 
-        return response()->json([
+        // DATE FILTER (IMPORTANT)
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
 
-            'list' => $list,
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
 
-        ]);
+        $logs = $query->latest()->paginate($request->per_page ?? 15);
+
+        $logs->getCollection()->transform(function ($log) {
+            return [
+                'id' => $log->id,
+                'user' => $log->user ? [
+                    'full_name' => $log->user->full_name ?? $log->user->username,
+                    'username' => $log->user->username,
+                ] : null,
+                'action_type' => $log->action_type,
+                'module' => $log->module,
+                'table_name' => $log->table_name,
+                'record_id' => $log->record_id,
+                'ip_address' => $log->ip_address,
+                'device_info' => $log->device_info,
+                'created_at' => $log->created_at?->format('Y-m-d H:i:s'),
+            ];
+        });
+
+        return response()->json(['list' => $logs]);
     }
 
-    // SHOW SINGLE AUDIT LOG
-    public function show(string $id)
-    {
-        $audit = AuditLog::with('user')
-            ->find($id);
-
-        if (! $audit) {
-
-            return response()->json([
-
-                'error' => true,
-
-                'message' => 'រកមិនឃើញ Audit Log',
-
-            ], 404);
-        }
-
-        return response()->json([
-
-            'data' => $audit,
-
-        ]);
-    }
-
-    // AUDIT LOG STATS
     public function stats()
     {
         $stats = [
-
-            [
-                'title' => 'Audit Logs សរុប',
-                'value' => AuditLog::count(),
-                'color' => '#6366f1',
-                'icon' => 'FileTextOutlined',
-            ],
-
-            [
-                'title' => 'Create',
-                'value' => AuditLog::where(
-                    'action_type',
-                    'create'
-                )->count(),
-                'color' => '#10b981',
-                'icon' => 'PlusCircleOutlined',
-            ],
-
-            [
-                'title' => 'Update',
-                'value' => AuditLog::where(
-                    'action_type',
-                    'update'
-                )->count(),
-                'color' => '#f59e0b',
-                'icon' => 'EditOutlined',
-            ],
-
-            [
-                'title' => 'Delete',
-                'value' => AuditLog::where(
-                    'action_type',
-                    'delete'
-                )->count(),
-                'color' => '#ef4444',
-                'icon' => 'DeleteOutlined',
-            ],
-
-            [
-                'title' => 'ថ្ងៃនេះ',
-                'value' => AuditLog::whereDate(
-                    'created_at',
-                    today()
-                )->count(),
-                'color' => '#06b6d4',
-                'icon' => 'CalendarOutlined',
-            ],
+            ['title' => 'Audit Logs សរុប', 'value' => AuditLog::count(), 'color' => '#6366f1', 'icon' => 'FileTextOutlined'],
+            ['title' => 'Login', 'value' => AuditLog::where('action_type', 'login')->count(), 'color' => '#3b82f6', 'icon' => 'LoginOutlined'],
+            ['title' => 'Create', 'value' => AuditLog::where('action_type', 'create')->count(), 'color' => '#10b981', 'icon' => 'PlusCircleOutlined'],
+            ['title' => 'ថ្ងៃនេះ', 'value' => AuditLog::whereDate('created_at', today())->count(), 'color' => '#06b6d4', 'icon' => 'CalendarOutlined'],
         ];
 
-        return response()->json([
-
-            'stats' => $stats,
-
-        ]);
+        return response()->json(['stats' => $stats]);
     }
 }

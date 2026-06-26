@@ -8,15 +8,17 @@ export const usePaginationStore = create((set) => ({
     limit: 10,
     total: 0,
     txt_search: "",
-    status: null,
+    is_active: null,
   },
-  setPagination: (newPagination) =>
+
+  setPagination: (updates) =>
     set((state) => ({
       pagination: {
         ...state.pagination,
-        ...newPagination
-      },
+        ...updates
+      }
     })),
+
   resetPagination: () =>
     set({
       pagination: {
@@ -24,7 +26,7 @@ export const usePaginationStore = create((set) => ({
         limit: 10,
         total: 0,
         txt_search: "",
-        status: null,
+        is_active: null,
       },
     }),
 }));

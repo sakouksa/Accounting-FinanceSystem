@@ -23,7 +23,9 @@ export const useChartOfAccount = () => {
     stats: [],
     loading: false,
     open: false,
-    editingChartOfAccount: null
+    editingChartOfAccount: null,
+    account_types: [],
+    parent_accounts: [],
   })
 
   const {
@@ -43,17 +45,23 @@ export const useChartOfAccount = () => {
     }
   }
 
-  const getList = async (param_filter = {}) => {
+  const getList = async (custom = pagination) => {
     setState(prev => ({
       ...prev,
       loading: true
     }))
 
-    let query = '?page=1'
-    if (param_filter.txt_search) query += `&txt_search=${encodeURIComponent(param_filter.txt_search)}`
-    if (param_filter.status) query += `&status=${param_filter.status}`
-    if (param_filter.account_type_id) query += `&account_type_id=${param_filter.account_type_id}`
-    if (param_filter.parent_account_id) query += `&parent_account_id=${param_filter.parent_account_id}`
+    let query = `?page=${custom.page || 1}&limit=${custom.limit || 10}`
+
+    if (custom.txt_search) {
+      query += `&txt_search=${encodeURIComponent(custom.txt_search)}`
+    }
+    if (custom.status) {
+      query += `&status=${custom.status}`
+    }
+    if (custom.account_type_id) {
+      query += `&account_type_id=${custom.account_type_id}`
+    }
 
     const res = await request(`chart-of-accounts${query}`, 'get')
 
@@ -62,8 +70,10 @@ export const useChartOfAccount = () => {
         ...prev,
         list: res.list || [],
         account_types: res.account_types || [],
+        parent_accounts: res.parent_accounts || [],
         loading: false
       }))
+
       setPagination({
         total: res.total || 0
       })
@@ -182,9 +192,12 @@ export const useChartOfAccount = () => {
   }
 
   useEffect(() => {
-    getList()
     getStats()
   }, [])
+
+  useEffect(() => {
+    getList(pagination)
+  }, [pagination.page, pagination.limit])
 
   return {
     state,
@@ -199,6 +212,6 @@ export const useChartOfAccount = () => {
     handleStatusChange,
     handleDelete,
     handleBulkDelete,
-    handleDeleteAll
+    handleDeleteAll,
   }
 }

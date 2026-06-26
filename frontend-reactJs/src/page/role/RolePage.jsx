@@ -70,7 +70,6 @@ function RolePage () {
     getList()
     getStats()
     getAllPermissions()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const getStats = async () => {
     const res = await request('roles/stats', 'get')
@@ -82,49 +81,67 @@ function RolePage () {
     }
   }
   const getList = async (currentFilter = pagination) => {
-    setState(pre => ({ ...pre, loading: true }))
+    setState(pre => ({
+      ...pre,
+      loading: true
+    }))
 
     let query_param = `?page=${currentFilter.page}&limit=${currentFilter.limit}`
-    if (currentFilter.txt_search !== '' && currentFilter.txt_search !== null) {
-      query_param += '&txt_search=' + currentFilter.txt_search
+    if (currentFilter.txt_search && currentFilter.txt_search.trim() !== '') {
+      query_param += '&txt_search=' + encodeURIComponent(currentFilter.txt_search)
     }
-    if (currentFilter.status !== '' && currentFilter.status !== null) {
+    if (currentFilter.status && currentFilter.status !== '') {
       query_param += '&status=' + currentFilter.status
     }
 
     const res = await request('roles' + query_param, 'get')
+
     if (res && res.status === 500) {
       message.error('មានបញ្ហាក្នុងការទាញយកទិន្នន័យ 500!')
-      setState(pre => ({ ...pre, loading: false }))
+      setState(pre => ({
+        ...pre,
+        loading: false
+      }))
       return
     }
 
-    if (res && !res.errors) {
+    // 💡 កែសម្រួលត្រង់ចំណុចលក្ខខណ្ឌនេះ ដើម្បីស្វែងរកទិន្នន័យពិតប្រាកដ
+    // ឆែកមើលថា តើទិន្នន័យស្ថិតនៅក្នុង res ផ្ទាល់ ឬនៅក្នុង res.data
+    const responseData = res?.data ? res.data : res;
+
+    if (responseData && responseData.list) {
       setState(pre => ({
         ...pre,
-        list: res.list || [],
+        list: responseData.list,
         loading: false
       }))
 
       setPagination({
-        total: res.total || res.list?.length || 0
+        total: responseData.total || responseData.list.length || 0
       })
     } else {
-      setState(pre => ({ ...pre, loading: false }))
-      if (res.errors?.message) {
+      setState(pre => ({
+        ...pre,
+        loading: false,
+        list: []
+      }))
+      if (res?.errors?.message) {
         message.error(res.errors.message)
       }
     }
   }
-
   const getAllPermissions = async () => {
     const res = await request('permissions', 'get')
     if (res && res.list) {
       const grouped = res.list.reduce((acc, perm) => {
-        ;(acc[perm.group] = acc[perm.group] || []).push(perm)
+        ;
+        (acc[perm.group] = acc[perm.group] || []).push(perm)
         return acc
       }, {})
-      setState(pre => ({ ...pre, permissionsList: grouped }))
+      setState(pre => ({
+        ...pre,
+        permissionsList: grouped
+      }))
     }
   }
 
@@ -169,7 +186,7 @@ function RolePage () {
 
     if (formRef.getFieldValue('id')) {
       url += '/' + formRef.getFieldValue('id')
-      method = 'put' // ប្រើ put សម្រាប់ update ក្នុង laravel api resource
+      method = 'put'
     }
 
     const res = await request(url, method, item)

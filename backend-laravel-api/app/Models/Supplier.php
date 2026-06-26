@@ -16,6 +16,12 @@ class Supplier extends Model
         'address',
         'opening_balance',
         'current_balance',
-        'status'
+        'status',
     ];
+
+    // relation to accounts payable
+    public function accountsPayables()
+    {
+        return $this->hasMany(AccountsPayable::class, 'supplier_id');
+    }
 }

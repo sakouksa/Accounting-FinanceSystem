@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class AuditLog extends Model
 {
+    protected $table = 'audit_logs';
+
     protected $fillable = [
         'user_id',
         'action_type',
@@ -15,12 +17,12 @@ class AuditLog extends Model
         'ip_address',
         'device_info',
         'old_value',
-        'new_value'
+        'new_value',
     ];
 
     protected $casts = [
         'old_value' => 'array',
-        'new_value' => 'array'
+        'new_value' => 'array',
     ];
 
     public function user()

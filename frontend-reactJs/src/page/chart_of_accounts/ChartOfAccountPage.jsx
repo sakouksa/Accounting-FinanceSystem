@@ -8,7 +8,7 @@ import ChartOfAccountModal from './components/ChartOfAccountModal'
 import ChartOfAccountHeader from './components/ChartOfAccountHeader'
 import ChartOfAccountStats from './components/ChartOfAccountStats'
 
-function ChartOfAccountPage() {
+function ChartOfAccountPage () {
   const {
     state,
     setState,
@@ -29,7 +29,7 @@ function ChartOfAccountPage() {
   const [filter, setFilter] = React.useState({
     txt_search: '',
     status: null,
-    account_type_id: null,
+    account_type_id: null
   })
 
   const handleOpenModal = () => {
@@ -52,7 +52,7 @@ function ChartOfAccountPage() {
     const defaultFilter = {
       txt_search: '',
       status: null,
-      account_type_id: null,
+      account_type_id: null
     }
     setFilter(defaultFilter)
     resetPagination()
@@ -72,6 +72,7 @@ function ChartOfAccountPage() {
           accountTypes={state.account_types || []}
           onFilter={handleFilter}
           onReset={handleReset}
+          setPagination={setPagination}
         />
 
         <ChartOfAccountTable
@@ -84,14 +85,17 @@ function ChartOfAccountPage() {
           onDeleteAll={handleDeleteAll}
           onBulkDelete={handleBulkDelete}
           onStatusChange={handleStatusChange}
+          setPagination={setPagination}
         />
 
         <ChartOfAccountModal
           open={state.open}
           setState={setState}
+          accountTypes={state.account_types || []}
+          parentAccounts={state.parent_accounts || []}
           editingChartOfAccount={state.editingChartOfAccount}
           onSuccess={() => {
-            getList(filter)   // Refresh with current filter
+            getList(filter) // Refresh with current filter
             getStats()
           }}
         />

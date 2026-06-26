@@ -1,30 +1,33 @@
-import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-
+import {
+  create
+} from 'zustand'
+import {
+  persist,
+  createJSONStorage
+} from 'zustand/middleware'
 export const profileStore = create(
   persist(
     set => ({
       profile: null,
       access_token: null,
-      permission: [],
+      permissions: [],
 
-      setProfile: params =>
-        set({
-          profile: params
-        }),
-      setAccessToken: params =>
-        set({
-          access_token: params
-        }),
+      setProfile: (profileParams, permissionsParams) => set({
+        profile: profileParams,
+        permissions: permissionsParams || []
+      }),
+
+      setAccessToken: (params) => set({
+        access_token: params
+      }),
 
       logout: () =>
         set({
           profile: null,
           access_token: null,
-          permission: []
+          permissions: []
         })
-    }),
-    {
+    }), {
       name: 'user-profile',
       storage: createJSONStorage(() => sessionStorage)
     }

@@ -11,7 +11,7 @@ class TransactionDetail extends Model
         'account_id',
         'debit_amount',
         'credit_amount',
-        'description'
+        'description',
     ];
 
     public function transaction()

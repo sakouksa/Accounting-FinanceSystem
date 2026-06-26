@@ -1,55 +1,60 @@
 import React from 'react'
 import { Row, Col, Card, Typography } from 'antd'
 import {
-  FileTextOutlined,
+  LoginOutlined,
   PlusCircleOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined
+  CalendarOutlined,
+  FileTextOutlined
 } from '@ant-design/icons'
 
 const { Title: AntTitle, Text } = Typography
 
+
 const iconMap = {
   FileTextOutlined: <FileTextOutlined />,
+  LoginOutlined: <LoginOutlined />,
   PlusCircleOutlined: <PlusCircleOutlined />,
-  EditOutlined: <EditOutlined />,
-  DeleteOutlined: <DeleteOutlined />
+  CalendarOutlined: <CalendarOutlined />
 }
 
-function AuditLogStats ({ stats }) {
+function AuditLogStats({ stats }) {
   return (
     <Row gutter={[16, 16]}>
-      {stats.map((item, index) => (
+      {stats?.map((item, index) => (
         <Col xs={24} sm={12} lg={6} key={index}>
           <Card
-            className='rounded-2xl border-none shadow-sm overflow-hidden relative hover:shadow-lg transition-all duration-300'
+            bordered={false}
+            className='rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden relative'
             bodyStyle={{ padding: 20 }}
           >
-            <div className='flex justify-between items-start'>
+            <div className='flex items-start justify-between'>
+              {/* Left Side */}
               <div>
-                <Text type='secondary' className='text-xs font-medium'>
+                <Text className='text-gray-500 text-sm font-medium'>
                   {item.title}
                 </Text>
 
-                <AntTitle level={3} className='m-0 mt-1 font-bold'>
-                  {item.value}
+                <AntTitle
+                  level={3}
+                  className='!mb-0 !mt-2 font-bold text-gray-800'
+                >
+                  {Number(item.value || 0).toLocaleString()}
                 </AntTitle>
               </div>
 
+              {/* Right Icon */}
               <div
-                className='p-3 rounded-xl bg-gray-50 text-xl'
+                className='w-14 h-14 rounded-2xl flex items-center justify-center text-3xl'
                 style={{
                   color: item.color,
                   backgroundColor: `${item.color}15`
                 }}
               >
-                {iconMap[item.icon]}
+                {iconMap[item.icon] || <FileTextOutlined />}
               </div>
             </div>
 
-            {/* Bottom Gradient */}
+            {/* Decorative Bottom Line */}
             <div
               className='absolute bottom-0 left-0 h-1 w-full'
               style={{

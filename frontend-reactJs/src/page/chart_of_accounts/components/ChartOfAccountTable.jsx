@@ -2,10 +2,11 @@ import { Table, Button, Space, Switch, Typography, Pagination, Tag } from 'antd'
 import { CiEdit } from 'react-icons/ci'
 import { MdDelete } from 'react-icons/md'
 import { dateClient } from '../../../util/helper'
+import CustomEmpty from '../../../components/common/CustomEmpty'
 
 const { Text } = Typography
 
-function ChartOfAccountTable({
+function ChartOfAccountTable ({
   list,
   selectedRowKeys,
   setSelectedRowKeys,
@@ -15,11 +16,13 @@ function ChartOfAccountTable({
   onBulkDelete,
   onStatusChange,
   onDeleteAll,
+  setPagination,
   loading = false
 }) {
-  const isAllSelected = selectedRowKeys?.length > 0 && 
-                        list?.length > 0 && 
-                        selectedRowKeys.length === list.length
+  const isAllSelected =
+    selectedRowKeys?.length > 0 &&
+    list?.length > 0 &&
+    selectedRowKeys.length === list.length
 
   return (
     <>
@@ -32,9 +35,19 @@ function ChartOfAccountTable({
             </div>
             <div className='text-sm text-gray-600'>
               {isAllSelected ? (
-                <>បានជ្រើសរើស <span className='font-semibold text-red-600'>ទាំងអស់</span> ទិន្នន័យ</>
+                <>
+                  បានជ្រើសរើស{' '}
+                  <span className='font-semibold text-red-600'>ទាំងអស់</span>{' '}
+                  ទិន្នន័យ
+                </>
               ) : (
-                <>បានជ្រើសរើស <span className='font-semibold text-indigo-600'>{selectedRowKeys.length}</span> ទិន្នន័យ</>
+                <>
+                  បានជ្រើសរើស{' '}
+                  <span className='font-semibold text-indigo-600'>
+                    {selectedRowKeys.length}
+                  </span>{' '}
+                  ទិន្នន័យ
+                </>
               )}
             </div>
           </div>
@@ -42,11 +55,17 @@ function ChartOfAccountTable({
           <Space>
             <Button onClick={() => setSelectedRowKeys([])}>បោះបង់</Button>
             {isAllSelected ? (
-              <button onClick={onDeleteAll} className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 transition shadow-sm">
+              <button
+                onClick={onDeleteAll}
+                className='px-3 py-1.5 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 transition shadow-sm'
+              >
                 លុបទាំងអស់
               </button>
             ) : (
-              <button onClick={onBulkDelete} className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 transition shadow-sm">
+              <button
+                onClick={onBulkDelete}
+                className='px-3 py-1.5 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 transition shadow-sm'
+              >
                 លុបជ្រើសរើស
               </button>
             )}
@@ -57,18 +76,40 @@ function ChartOfAccountTable({
       <Table
         dataSource={list}
         rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-        rowKey="id"
+        rowKey='id'
         scroll={{ x: 1600 }}
         pagination={false}
         loading={loading}
+        onChange = {
+          (pagination, filters, sorter) => {
+            const sortField = sorter.field;
+            let sortOrder = null;
+
+            if (sorter.order === 'ascend') sortOrder = 'asc';
+            if (sorter.order === 'descend') sortOrder = 'desc';
+            getList({
+              sort_by: sortOrder ? sortField : null,
+              sort_order: sortOrder
+            });
+          }
+        }
+        locale={{
+          emptyText: (
+            <CustomEmpty
+              title='មិនមានគណនី'
+              description='បង្កើតគណនីថ្មី ដើម្បីចាប់ផ្តើមកត់ត្រាប្រតិបត្តិការ'
+              onReload={() => window.location.reload()}
+            />
+          )
+        }}
         columns={[
           {
             title: 'កូដគណនី',
             dataIndex: 'account_code',
             key: 'account_code',
             width: 130,
-            render: (text) => (
-              <span className="font-semibold uppercase tracking-wider text-blue-600">
+            render: text => (
+              <span className='font-semibold uppercase tracking-wider text-blue-600'>
                 {text}
               </span>
             )
@@ -78,20 +119,18 @@ function ChartOfAccountTable({
             dataIndex: 'account_name',
             key: 'account_name',
             width: 280,
-            render: (text) => <Text strong>{text}</Text>
+            render: text => <Text strong>{text}</Text>
           },
           {
             title: 'ប្រភេទគណនី',
             dataIndex: 'account_type',
             key: 'account_type',
             width: 220,
-            render: (accountType) => {
-              if (!accountType) return <Tag color="default">—</Tag>
-              const code = accountType.code
-                ? `(${accountType.code})`
-                : ''
+            render: accountType => {
+              if (!accountType) return <Tag color='default'>—</Tag>
+              const code = accountType.code ? `(${accountType.code})` : ''
               return (
-                <Tag color="purple" className="font-medium">
+                <Tag color='purple' className='font-medium'>
                   {accountType.name} {code}
                 </Tag>
               )
@@ -102,10 +141,10 @@ function ChartOfAccountTable({
             dataIndex: 'parent',
             key: 'parent',
             width: 250,
-            render: (parent) => (
-              <span className="text-gray-600 font-medium">
+            render: parent => (
+              <span className='text-gray-600 font-medium'>
                 {parent
-                  ? `${parent.account_code} - ${parent.account_name}` 
+                  ? `${parent.account_code} - ${parent.account_name}`
                   : '—'}
               </span>
             )
@@ -116,7 +155,7 @@ function ChartOfAccountTable({
             key: 'normal_balance',
             width: 140,
             align: 'center',
-            render: (val) => (
+            render: val => (
               <Tag color={val === 'Debit' ? 'green' : 'orange'}>
                 {val === 'Debit' ? 'ឥណពន្ធ (Debit)' : 'ឥណទាន (Credit)'}
               </Tag>
@@ -128,7 +167,11 @@ function ChartOfAccountTable({
             key: 'opening_balance',
             width: 150,
             align: 'right',
-            render: (val) => <span className="font-medium">{Number(val || 0).toLocaleString()}</span>
+            render: val => (
+              <span className='font-medium'>
+                {Number(val || 0).toLocaleString()}
+              </span>
+            )
           },
           {
             title: 'សមតុល្យបច្ចុប្បន្ន',
@@ -136,8 +179,12 @@ function ChartOfAccountTable({
             key: 'current_balance',
             width: 160,
             align: 'right',
-            render: (val) => (
-              <span className={`font-semibold ${val < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+            render: val => (
+              <span
+                className={`font-semibold ${
+                  val < 0 ? 'text-red-600' : 'text-emerald-600'
+                }`}
+              >
                 {Number(val || 0).toLocaleString()}
               </span>
             )
@@ -148,38 +195,33 @@ function ChartOfAccountTable({
             key: 'currency_code',
             width: 100,
             align: 'center',
-            render: (code) => code ? <strong>{code}</strong> : '—'
+            render: code => (code ? <strong>{code}</strong> : '—')
           },
- {
-  title: 'ស្ថានភាព',
-  dataIndex: 'status',
-  key: 'status',
-  width: 130,
-  align: 'center',
-  render: (val, record) => {
-    const isActive = val === 'Active'
+          {
+            title: 'ស្ថានភាព',
+            dataIndex: 'status',
+            key: 'status',
+            width: 130,
+            align: 'center',
+            render: (val, record) => {
+              const isActive = val === 'Active'
 
-    return (
-      <Switch
-        size='small'
-        checked={isActive}
-        onChange={checked =>
-          onStatusChange(
-            record.id,
-            checked ? 'Active' : 'Inactive'
-          )
-        }
-        checkedChildren='សកម្ម'
-        unCheckedChildren='អសកម្ម'
-        className={`
-          ${isActive
-            ? '!bg-blue-500'
-            : '!bg-red-500'}
+              return (
+                <Switch
+                  size='small'
+                  checked={isActive}
+                  onChange={checked =>
+                    onStatusChange(record.id, checked ? 'Active' : 'Inactive')
+                  }
+                  checkedChildren='សកម្ម'
+                  unCheckedChildren='អសកម្ម'
+                  className={`
+          ${isActive ? '!bg-blue-500' : '!bg-red-500'}
         `}
-      />
-    )
-  }
-},
+                />
+              )
+            }
+          },
           {
             title: 'ថ្ងៃបង្កើត',
             dataIndex: 'created_at',
@@ -218,15 +260,26 @@ function ChartOfAccountTable({
       {/* Custom Pagination */}
       <div className='flex justify-between items-center bg-white p-4 border border-gray-100 rounded-b-2xl shadow-sm mt-0.5'>
         <span className='text-gray-600 text-sm'>
-          សរុប: <b className='text-indigo-600'>{pagination.total || 0}</b> គណនី
+          សរុប: <b className='text-indigo-600'>{pagination.total || 0}</b>{' '}
+          ទិន្នន័យ
         </span>
+
         <Pagination
-          current={pagination.page || 1}
-          pageSize={pagination.limit || 20}
+          current={pagination.page}
+          pageSize={pagination.limit}
           total={pagination.total}
-          onChange={(page, pageSize) => {
-            if (pagination.onChange) pagination.onChange(page, pageSize)
-          }}
+          onChange = {
+            (page, pageSize) => {
+              setPagination({
+                page,
+                limit: pageSize
+              })
+              getList({
+                page,
+                limit: pageSize
+              })
+            }
+          }
           showSizeChanger
           pageSizeOptions={['10', '20', '50', '100']}
         />

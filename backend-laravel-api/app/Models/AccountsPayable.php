@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class AccountsPayable extends Model
 {
+    protected $table = 'accounts_payable';
+
     protected $fillable = [
         'supplier_id',
         'bill_no',
@@ -14,11 +16,17 @@ class AccountsPayable extends Model
         'total_amount',
         'paid_amount',
         'balance_amount',
-        'status'
+        'status',
     ];
 
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    // relation to payment
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'payable_id');
     }
 }

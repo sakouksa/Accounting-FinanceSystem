@@ -8,11 +8,12 @@ class AccountType extends Model
 {
     protected $table = 'account_types';
 
-    protected $primaryKey = 'id';
-
-    public $timestamps = true;
-
-    protected $fillable = ['name', 'code', 'normal_balance', 'description'];
+    protected $fillable = [
+        'name',
+        'code',
+        'normal_balance',
+        'description',
+    ];
 
     public function accounts()
     {

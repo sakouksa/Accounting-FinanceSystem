@@ -12,16 +12,22 @@ class CashFlow extends Model
         'flow_type',
         'account_id',
         'amount',
-        'description'
+        'description',
     ];
 
+    /**
+     * Relationship CashFlow transaction
+     */
     public function transaction()
     {
-        return $this->belongsTo(Transaction::class);
+        return $this->belongsTo(Transaction::class, 'transaction_id');
     }
 
+    /**
+     * relationship CashFlow account
+     */
     public function account()
     {
-        return $this->belongsTo(ChartOfAccount::class);
+        return $this->belongsTo(ChartOfAccount::class, 'account_id');
     }
 }

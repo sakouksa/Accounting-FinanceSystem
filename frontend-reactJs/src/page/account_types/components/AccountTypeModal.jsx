@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react'
 import {
   Modal,
   Form,
@@ -12,64 +13,61 @@ import {
 import { request } from '../../../util/request'
 import { RiSave3Fill } from 'react-icons/ri'
 import { BiSolidEditAlt } from 'react-icons/bi'
-import React from 'react'
 
-function AccountTypeModal ({ open, setState, editingAccountType, onSuccess }) {
+function AccountTypeModal({
+  open,
+  setState,
+  editingAccountType,
+  onSuccess
+}) {
   const [form] = Form.useForm()
 
-  const fillEditData = () => {
+  const isEdit = !!editingAccountType
+
+  // Fill form when edit
+  useEffect(() => {
     if (editingAccountType) {
       form.setFieldsValue({
-        id: editingAccountType.id,
-        code: editingAccountType.code,
         name: editingAccountType.name,
+        code: editingAccountType.code,
         normal_balance: editingAccountType.normal_balance,
         description: editingAccountType.description
       })
     } else {
       form.resetFields()
     }
-  }
-
-  // ហៅ fillEditData ពេល editingAccountType ផ្លាស់ប្តូរ
-  React.useEffect(() => {
-    fillEditData()
-  }, [editingAccountType])
+  }, [editingAccountType, form])
 
   const handleClose = () => {
-    setState(prev => ({ ...prev, open: false, editingAccountType: null }))
+    setState(prev => ({
+      ...prev,
+      open: false,
+      editingAccountType: null
+    }))
     form.resetFields()
   }
 
-  const onFinish = async values => {
-    let url = 'account-types'
-    let method = 'post'
+  const onFinish = async (values) => {
+    let res
 
-    const payload = {
-      ...values
+    if (editingAccountType?.id) {
+      res = await request(`account-types/${editingAccountType.id}`, 'put', values)
+    } else {
+      res = await request('account-types', 'post', values)
     }
-
-    if (values.id) {
-      url = `account-types/${values.id}`
-      payload._method = 'PUT'
-    }
-
-    const res = await request(url, 'post', payload)
-
-    if (res?.data || !res?.errors) {
+    
+    if (!res?.error) {
       message.success(res.message || 'ជោគជ័យ!')
       handleClose()
-      onSuccess()
+      onSuccess?.()
     } else {
-      message.error(res?.message || 'បរាជ័យ!')
+      message.error(res?.errors?.message || res?.message || 'បរាជ័យ!')
     }
   }
 
   return (
     <Modal
-      title={
-        editingAccountType ? 'កែប្រែប្រភេទគណនេយ្យ' : 'បង្កើតប្រភេទគណនេយ្យថ្មី'
-      }
+      title={isEdit ? 'កែប្រែប្រភេទគណនេយ្យ' : 'បង្កើតប្រភេទគណនេយ្យ'}
       open={open}
       onCancel={handleClose}
       centered
@@ -77,74 +75,78 @@ function AccountTypeModal ({ open, setState, editingAccountType, onSuccess }) {
       footer={null}
       maskClosable={false}
     >
-      <Form layout='vertical' form={form} onFinish={onFinish}>
-        <Form.Item name='id' hidden>
-          <Input />
-        </Form.Item>
+      <Form layout="vertical" form={form} onFinish={onFinish}>
 
         <Row gutter={16}>
-          <Col xs={24} sm={24}>
+          <Col xs={24}>
             <Form.Item
-              label='ឈ្មោះប្រភេទគណនី (Name)'
-              name='name'
-              rules={[{ required: true, message: 'សូមបញ្ចូលឈ្មោះ!' }]}
+              label="ឈ្មោះប្រភេទគណនី"
+              name="name"
+              rules={[
+                { required: true, message: 'សូមបញ្ចូលឈ្មោះ!' },
+                { min: 2, message: 'តិចបំផុត 2 តួអក្សរ' },
+                { max: 100, message: 'មិនអាចលើស 100 តួអក្សរ' }
+              ]}
+            
             >
-              <Input
-                placeholder='ឧ. Asset, Liability, Equity, Revenue, Expense'
-                style={{ textTransform: 'uppercase' }}
-              />
+              <Input placeholder="ឧ. Asset, Liability..." />
             </Form.Item>
           </Col>
-
         </Row>
 
         <Row gutter={16}>
-        <Col xs={24} sm={12}>
-            <Form.Item
-              label='កូដគណនី (Code)'
-              name='code'
-              rules={[{ required: true, message: 'សូមបញ្ចូលកូដ!' }]}
-            >
-              <Input
-                placeholder='ឧ. ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE'
-                style={{ textTransform: 'uppercase' }}
-              />
-            </Form.Item>
-          </Col>
           <Col xs={24} sm={12}>
             <Form.Item
-              label='សមតុល្យធម្មតា (Normal Balance)'
-              name='normal_balance'
-              rules={[{ required: true, message: 'សូមជ្រើសរើសសមតុល្យធម្មតា!' }]}
+              label="កូដ"
+              name="code"
+              rules={[{ required: true, message: 'សូមបញ្ចូលកូដ!' }]}
             >
-              <Select placeholder='ជ្រើសរើសសមតុល្យធម្មតា'>
-                <Select.Option value='debit'>Debit</Select.Option>
-                <Select.Option value='credit'>Credit</Select.Option>
+              <Input placeholder="ឧ. ASSET" />
+            </Form.Item>
+          </Col>
+
+          <Col xs={24} sm={12}>
+            <Form.Item
+              label="សមតុល្យធម្មតា"
+              name="normal_balance"
+              rules={[{ required: true, message: 'សូមជ្រើសរើស!' }]}
+            >
+              <Select placeholder="ជ្រើសរើស">
+                <Select.Option value="debit">Debit</Select.Option>
+                <Select.Option value="credit">Credit</Select.Option>
               </Select>
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16}>
           <Col xs={24}>
-            <Form.Item label='ការពិពណ៌នា (Description)' name='description'>
-              <Input.TextArea placeholder='ការពិពណ៌នាអំពីប្រភេទគណនីនេះ...' rows={4} />
+            <Form.Item
+              label="ពិពណ៌នា"
+              name="description"
+            >
+              <Input.TextArea rows={4} placeholder="ពិពណ៌នា..." />
             </Form.Item>
           </Col>
         </Row>
 
         <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
           <Space>
-            <Button onClick={handleClose}>បោះបង់</Button>
+            <Button onClick={handleClose}>
+              បោះបង់
+            </Button>
+
             <Button
-              type='primary'
-              className='bg-blue-600 hover:!bg-blue-700 border-none rounded-lg shadow-sm'
-              htmlType='submit'
-              icon={
-                form.getFieldValue('id') ? <BiSolidEditAlt /> : <RiSave3Fill />
-              }
+              type="primary"
+              htmlType="submit"
+              icon={isEdit ? <BiSolidEditAlt /> : <RiSave3Fill />}
+              className="bg-blue-600 hover:!bg-blue-700 border-none"
             >
-              {form.getFieldValue('id') ? 'ធ្វើបច្ចុប្បន្នភាព' : 'រក្សាទុក'}
+              {isEdit ? 'ធ្វើបច្ចុប្បន្នភាព' : 'រក្សាទុក'}
             </Button>
           </Space>
         </Form.Item>
+
       </Form>
     </Modal>
   )

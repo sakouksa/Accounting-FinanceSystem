@@ -52,7 +52,7 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
         }
 
         const status = response.status;
-
+        const rawErrors = data?.errors || {};
         let errors = {
           message: data?.message,
         };
@@ -67,7 +67,20 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
             };
           });
         }
-
+        if (status === 422 && Object.keys(rawErrors).length > 0) {
+          errors.validation = rawErrors;
+          errors.message = data?.message || "សូមពិនិត្យទិន្នន័យឡើងវិញ";
+        }
+        // unauthenticated
+        if (status === 401) {
+          return {
+            error: true,
+            status,
+            errors: {
+              message: data?.message || "សម័យចូលប្រើប្រាស់របស់អ្នកបានផុតកំណត់។ សូមចូលគណនីម្ដងទៀត។",
+            },
+          };
+        }
         // server error
         if (status == 500) {
           errors.message =
@@ -85,6 +98,7 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
           error: true,
           status: status,
           errors: errors,
+          validationErrors: rawErrors
         };
       }
 

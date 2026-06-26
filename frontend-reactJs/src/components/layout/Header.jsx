@@ -1,97 +1,89 @@
 import React from 'react'
-import { Layout, Input, Button, Dropdown, Avatar, Badge, Divider } from 'antd'
+import { Layout, Button, Dropdown, Avatar, Divider } from 'antd'
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  SearchOutlined,
-  MoonOutlined,
-  SunOutlined,
-  PlusOutlined,
   SettingOutlined,
   LogoutOutlined,
-  BellOutlined
+  UserOutlined,
+  EditOutlined
 } from '@ant-design/icons'
 
 import { profileStore } from '../../store/profileStore'
 import { useNavigate } from 'react-router-dom'
 import config from '../../util/config'
+import { useLogout } from '../../hooks/useLogout'
 
 const { Header: AntHeader } = Layout
 
-const Header = ({ collapsed, setCollapsed, isDarkMode, toggleTheme }) => {
+const Header = ({ collapsed, setCollapsed, isDarkMode }) => {
   const navigate = useNavigate()
-
-  const { profile, logout } = profileStore()
-
+  const { profile } = profileStore()
   const user = profile || {}
+  const logout = useLogout()
 
-  const handleLogout = () => {
-    logout()
-    sessionStorage.clear()
-    navigate('/login')
-  }
-
+  // មុខងារសម្រាប់ Dropdown Menu ដែលរចនាឡើងវិញ
   const dropdownContent = (
     <div
-      className={`shadow-xl rounded-xl border min-w-[220px] ${
+      className={`shadow-2xl rounded-2xl border min-w-[240px] overflow-hidden ${
         isDarkMode
           ? 'bg-[#161b26] border-[#232e45]'
-          : 'bg-white border-[#f1f5f9]'
+          : 'bg-white border-slate-100'
       }`}
     >
-      {/* USER INFO */}
-      <div className='p-4'>
+      {/* User Info Header */}
+      <div className={`p-4 ${isDarkMode ? 'bg-[#1c222e]' : 'bg-slate-50'}`}>
         <div
-          className={`text-sm font-bold ${
+          className={`text-sm font-bold truncate ${
             isDarkMode ? 'text-white' : 'text-slate-800'
           }`}
         >
-          {user.full_name || 'No Name'}
+          {user.full_name || 'មិនមានឈ្មោះ'}
         </div>
-        <div className='text-xs text-slate-400'>{user.email || '-'}</div>
+        <div className='text-xs text-slate-400 truncate'>
+          {user.email || '—'}
+        </div>
       </div>
 
-      <Divider className='my-0 opacity-50' />
-
-      {/* MENU */}
       <div className='p-2 flex flex-col gap-1'>
         <Button
           type='text'
           block
-          icon={<SettingOutlined />}
-          className={`flex items-center h-10 ${
+          icon={<UserOutlined />}
+          onClick={() => navigate('/profiles')}
+          className={`flex items-center h-10 hover:bg-indigo-50 hover:text-indigo-600 ${
             isDarkMode ? 'text-slate-300' : 'text-slate-600'
           }`}
         >
-          <span className='ml-2 text-left flex-1'>Settings</span>
+          <span className='ml-3 text-left flex-1 font-medium'>
+            ព័ត៌មានផ្ទាល់ខ្លួន
+          </span>
         </Button>
 
         <Button
           type='text'
           block
-          icon={<BellOutlined />}
-          className={`flex items-center h-10 ${
+          icon={<EditOutlined />}
+          onClick={() => navigate('/profile-settings')}
+          className={`flex items-center h-10 hover:bg-indigo-50 hover:text-indigo-600 ${
             isDarkMode ? 'text-slate-300' : 'text-slate-600'
           }`}
         >
-          <span className='ml-2 text-left flex-1'>Notifications</span>
-
-          <Badge count={4} size='small' className='ml-auto' />
+          <span className='ml-3 text-left flex-1 font-medium'>កែប្រែគណនី</span>
         </Button>
       </div>
 
-      <Divider className='my-0 opacity-50' />
+      <Divider className='my-0' />
 
-      {/* LOGOUT */}
       <div className='p-2'>
         <Button
           danger
           block
           icon={<LogoutOutlined />}
-          onClick={handleLogout}
-          className='flex items-center h-10'
+          onClick={logout}
+          className='h-10 font-semibold'
         >
-          <span className='ml-2 text-left flex-1 font-medium'>Log out</span>
+          ចាកចេញ (Logout)
         </Button>
       </div>
     </div>
@@ -112,55 +104,18 @@ const Header = ({ collapsed, setCollapsed, isDarkMode, toggleTheme }) => {
           onClick={() => setCollapsed(!collapsed)}
           className={isDarkMode ? 'text-white' : 'text-slate-600'}
         />
-        <div className='hidden md:block max-w-[320px] w-full'>
-          <Input
-            placeholder='Search anything...'
-            prefix={<SearchOutlined className='text-slate-400' />}
-            suffix={
-              <span className='text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400 border border-slate-200'>
-                ⌘K
-              </span>
-            }
-            className={`h-9 rounded-xl border-none ${
-              isDarkMode ? 'bg-[#161b26] text-white' : 'bg-[#f8fafc]'
-            }`}
-          />
-        </div>
       </div>
 
       <div className='flex items-center gap-3'>
-        <div className='flex items-center gap-1 mx-2'>
-          {/* <Button
-            type='text'
-            icon={
-              isDarkMode ? (
-                <SunOutlined className='text-yellow-400' />
-              ) : (
-                <MoonOutlined />
-              )
-            }
-            onClick={toggleTheme}
-            className='text-slate-500'
-          /> */}
-          <Badge count={4} size='small' offset={[-2, 4]} color='#ef4444'>
-            <Button
-              type='text'
-              icon={<BellOutlined className='text-slate-500 text-lg' />}
-            />
-          </Badge>
-        </div>
-
-        {/* User Profile Dropdown */}
         <Dropdown
           dropdownRender={() => dropdownContent}
           placement='bottomRight'
           trigger={['click']}
-          arrow
         >
-          <div className='flex items-center gap-3 cursor-pointer p-1 hover:bg-slate-50 rounded-lg transition-all'>
+          <div className='flex items-center gap-3 cursor-pointer p-1 pr-3 hover:bg-slate-100 rounded-full transition-all'>
             <Avatar
-              size={36}
-              className = "ring-2 ring-[rgb(16,185,129)] ring-offset-2 ring-offset-white"
+              size={38}
+              className='ring-2 ring-indigo-500 ring-offset-2'
               src={
                 user?.profile_image
                   ? config.image_path + user.profile_image
@@ -168,8 +123,17 @@ const Header = ({ collapsed, setCollapsed, isDarkMode, toggleTheme }) => {
               }
             >
               {!user?.profile_image &&
-                (user?.full_name ? user.full_name.charAt(0) : 'U')}
+                (user?.full_name
+                  ? user.full_name.charAt(0).toUpperCase()
+                  : 'U')}
             </Avatar>
+            <span
+              className={`font-semibold hidden md:block ${
+                isDarkMode ? 'text-slate-200' : 'text-slate-700'
+              }`}
+            >
+              {user.full_name ? user.full_name.split(' ')[0] : 'អ្នកប្រើប្រាស់'}
+            </span>
           </div>
         </Dropdown>
       </div>

@@ -22,31 +22,49 @@ export const useAuditLog = () => {
     resetPagination
   } = usePaginationStore()
 
-  // LIST
-  const getList = async (filter = pagination) => {
+  const [filters, setFilters] = useState({
+    txt_search: '',
+    action_type: null,
+    module: null,
+    table_name: null,
+    user_id: null,
+    start_date: null,
+    end_date: null
+  })
+
+  const buildQuery = (filters, pagination) => {
+    let query = `?page=${pagination.page || 1}&per_page=${pagination.limit || 10}`
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== null && value !== '') {
+        query += `&${key}=${encodeURIComponent(value)}`
+      }
+    })
+
+    return query
+  }
+
+  const getList = async (
+    customFilters = filters,
+    customPagination = pagination
+  ) => {
     setState(prev => ({
       ...prev,
       loading: true
     }))
 
-    let query = `?page=${filter.page || 1}&per_page=${filter.limit || 10}`
-
-    if (filter.txt_search)
-      query += `&txt_search=${filter.txt_search}`
-
-    if (filter.action_type)
-      query += `&action_type=${filter.action_type}`
-
-    if (filter.module)
-      query += `&module=${filter.module}`
-
-    if (filter.table_name)
-      query += `&table_name=${filter.table_name}`
-
-    if (filter.user_id)
-      query += `&user_id=${filter.user_id}`
+    const query = buildQuery(customFilters, customPagination)
 
     const res = await request(`audit-logs${query}`, 'get')
+
+    // handle request() error format
+    if (res?.error) {
+      setState(prev => ({
+        ...prev,
+        loading: false
+      }))
+      return
+    }
 
     setState(prev => ({
       ...prev,
@@ -59,9 +77,10 @@ export const useAuditLog = () => {
     })
   }
 
-  // STATS
   const getStats = async () => {
     const res = await request('audit-logs/stats', 'get')
+
+    if (res?.error) return
 
     setState(prev => ({
       ...prev,
@@ -69,18 +88,39 @@ export const useAuditLog = () => {
     }))
   }
 
+  const resetFilters = () => {
+    const defaultFilters = {
+      txt_search: '',
+      action_type: null,
+      module: null,
+      table_name: null,
+      user_id: null,
+      start_date: null,
+      end_date: null
+    }
+
+    setFilters(defaultFilters)
+    resetPagination()
+
+    getList(defaultFilters, {
+      page: 1,
+      limit: 10
+    })
+  }
+
   useEffect(() => {
-    getList()
-    getStats()
-  }, [])
+    getList(filters, pagination)
+  }, [pagination.page, pagination.limit])
 
   return {
     state,
-    setState,
+    filters,
+    setFilters,
     pagination,
     setPagination,
     resetPagination,
     getList,
-    getStats
+    getStats,
+    resetFilters
   }
 }

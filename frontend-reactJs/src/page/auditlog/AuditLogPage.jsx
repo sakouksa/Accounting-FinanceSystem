@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import MainPage from '../../components/layout/MainPage'
 import { useAuditLog } from './hooks/useAuditLog'
 
@@ -7,18 +7,25 @@ import AuditLogTable from './components/AuditLogTable'
 import AuditLogHeader from './components/AuditLogHeader'
 import AuditLogStats from './components/AuditLogStats'
 
-function AuditLogPage () {
+function AuditLogPage() {
   const {
     state,
-    setState,
+    filters,
+    setFilters,
     selectedRowKeys,
     setSelectedRowKeys,
     pagination,
     setPagination,
     resetPagination,
     getList,
-    getStats
+    getStats,
+    resetFilters
   } = useAuditLog()
+
+  useEffect(() => {
+    getStats()
+  }, [])
+
   const handleOpenModal = () => {
     setState(prev => ({ ...prev, open: true, editingAuditLog: null }))
   }
@@ -31,27 +38,34 @@ function AuditLogPage () {
     }))
   }
 
+  const handleSearch = () => {
+    resetPagination()
+    getList(filters, { page: 1, limit: pagination.limit || 10 })
+  }
+
   return (
     <MainPage loading={state.loading}>
       <div className='space-y-6'>
+
         <AuditLogHeader onAdd={handleOpenModal} />
+
         <AuditLogStats stats={state.stats} />
 
         <AuditLogFilter
-          pagination={pagination}
-          setPagination={setPagination}
-          onFilter={() => getList()}
-          onReset={() => {
-            resetPagination()
-            getList({ page: 1, limit: 10, txt_search: '', status: null })
-          }}
+          filters={filters}
+          setFilters={setFilters}
+          onSearch={handleSearch}
+          onReset={resetFilters}
         />
+
         <AuditLogTable
           list={state.list}
           selectedRowKeys={selectedRowKeys}
           setSelectedRowKeys={setSelectedRowKeys}
           pagination={pagination}
+          setPagination={setPagination}
         />
+
       </div>
     </MainPage>
   )

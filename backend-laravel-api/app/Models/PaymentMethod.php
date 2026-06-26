@@ -20,4 +20,10 @@ class PaymentMethod extends Model
     {
         return $this->qr_code ? asset('storage/'.$this->qr_code) : null;
     }
+
+    // relation to payment
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'payment_method_id');
+    }
 }
