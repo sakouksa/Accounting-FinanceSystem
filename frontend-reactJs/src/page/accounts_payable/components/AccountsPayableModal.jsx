@@ -122,7 +122,7 @@ function AccountsPayableModal ({
       centered
       width={900}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form
         layout='vertical'

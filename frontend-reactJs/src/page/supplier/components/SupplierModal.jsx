@@ -116,7 +116,7 @@ function SupplierModal ({ open, setState, editingSupplier, onSuccess }) {
       centered
       width={850}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form form={form} layout="vertical" onFinish={onFinish}>
 

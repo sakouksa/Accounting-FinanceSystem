@@ -52,6 +52,7 @@ function BranchesPage () {
 
         <BranchTable
           list={state.list}
+          loading={state.loading}
           selectedRowKeys={selectedRowKeys}
           setSelectedRowKeys={setSelectedRowKeys}
           pagination={pagination}

@@ -1,8 +1,6 @@
 import axios from "axios";
 import config from "./config";
-import {
-  profileStore
-} from "../store/profileStore";
+import { profileStore } from "../store/profileStore";
 
 export const request = (url = "", method = "", data = {}, option = {}) => {
   let access_token = profileStore.getState().access_token;
@@ -71,8 +69,12 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
           errors.validation = rawErrors;
           errors.message = data?.message || "សូមពិនិត្យទិន្នន័យឡើងវិញ";
         }
+        
         // unauthenticated
         if (status === 401) {
+          // Clear access token and profile info on unauthorized response
+          profileStore.getState().logout();
+          
           return {
             error: true,
             status,
@@ -81,11 +83,23 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
             },
           };
         }
+
+        // forbidden / unauthorized action
+        if (status === 403) {
+          return {
+            error: true,
+            status,
+            errors: {
+              message: data?.message || "អ្នកមិនមានសិទ្ធិអនុវត្តសកម្មភាពនេះទេ!",
+            },
+          };
+        }
+
         // server error
         if (status == 500) {
           errors.message =
             data?.message ||
-            "500 : មានបញ្ហាបច្ចេកទេសក្នុងប្រព័ន្ធ";
+            "500 : 有技術問題 / មានបញ្ហាបច្ចេកទេសក្នុងប្រព័ន្ធ";
 
           return {
             error: true,

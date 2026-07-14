@@ -1,4 +1,4 @@
-import { Table, Button, Space, Switch, Typography, Pagination } from 'antd'
+import { Table, Button, Space, Switch, Typography, Pagination, Skeleton, Empty } from 'antd'
 import { CiEdit } from 'react-icons/ci'
 import { MdDelete } from 'react-icons/md'
 import { dateClient } from '../../../util/helper'
@@ -52,6 +52,15 @@ function BranchTable ({
         scroll={{ x: 1000 }}
         pagination={false}
         loading={loading}
+        locale={{
+          emptyText: loading ? (
+            <div style={{ padding: '24px' }}>
+              <Skeleton active paragraph={{ rows: 5 }} />
+            </div>
+          ) : (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description='រកមិនឃើញទិន្នន័យឡើយ' />
+          )
+        }}
         columns={[
           { title: 'ឈ្មោះសាខា', dataIndex: 'name', key: 'name' },
           { title: 'កូដសាខា', dataIndex: 'code', key: 'code' },

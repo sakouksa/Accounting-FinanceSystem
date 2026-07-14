@@ -28,8 +28,6 @@ import { profileStore } from '../../store/profileStore'
 import config from '../../util/config'
 
 const { Sider } = Layout
-
-// 🔴 Export ម៉ឺនុយដើមដើម្បីឱ្យ MainLayout យកទៅ Filter តាមសិទ្ធិ
 export const items_menu_left_tmp = [
   {
     type: 'group',
@@ -207,15 +205,16 @@ export const items_menu_left_tmp = [
             label: 'សិទ្ធិ'
           },
           {
+            key: '/users',
+            permission: 'users.view',
+            icon: <TeamOutlined />,
+            label: 'គណនីអ្នកប្រើប្រាស់'
+          },
+          {
             key: '/role-permissions',
             icon: <FileProtectOutlined />,
             label: 'សិទ្ធិតាមតួនាទី'
           },
-          {
-            key: '/add-user',
-            icon: <UserAddOutlined />,
-            label: 'បន្ថែមអ្នកប្រើ'
-          }
         ]
       }
     ]
@@ -245,7 +244,7 @@ export const items_menu_left_tmp = [
   }
 ]
 
-// 🔴 ទទួលយក menuItems (បញ្ជីម៉ឺនុយដែលបាន Filter រួច) ពី MainLayout
+// ទទួលយក menuItems (បញ្ជីម៉ឺនុយដែលបាន Filter រួច) ពី MainLayout
 const Sidebar = ({ collapsed, isDarkMode, menuItems }) => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -284,7 +283,7 @@ const Sidebar = ({ collapsed, isDarkMode, menuItems }) => {
 
   const onOpenChange = (keys) => {
     const latestOpenKey = keys.find((key) => !openKeys.includes(key))
-    const rootSubmenuKeys = items_menu_left_tmp.flatMap(group => 
+    const rootSubmenuKeys = items_menu_left_tmp.flatMap(group =>
       group.children ? group.children.filter(item => item.children).map(item => item.key) : []
     )
 
@@ -302,11 +301,10 @@ const Sidebar = ({ collapsed, isDarkMode, menuItems }) => {
       collapsed={collapsed}
       width={260}
       theme={isDarkMode ? 'dark' : 'light'}
-      className={`fixed h-screen left-0 top-0 z-[1001] border-r transition-all duration-300 flex flex-col ${
-        isDarkMode
-          ? 'border-[#232e45] bg-[#0b0e14]'
-          : 'border-[#f1f5f9] bg-[#ffffff]'
-      }`}
+      className={`fixed h-screen left-0 top-0 z-[1001] border-r transition-all duration-300 flex flex-col ${isDarkMode
+        ? 'border-[#232e45] bg-[#0b0e14]'
+        : 'border-[#f1f5f9] bg-[#ffffff]'
+        }`}
     >
       <div className='flex flex-col h-full justify-between'>
         <div className='flex flex-col h-[calc(100vh-80px)]'>
@@ -327,15 +325,29 @@ const Sidebar = ({ collapsed, isDarkMode, menuItems }) => {
           </div>
 
           <div className='flex-1 overflow-y-auto custom-sidebar-scroll pb-4'>
-            <Menu
+            < Menu
               mode='inline'
-              openKeys={openKeys}
-              onOpenChange={onOpenChange}
-              selectedKeys={[location?.pathname]}
-              items={menuItems || []} // 🔴 បង្ហាញម៉ឺនុយតាមសិទ្ធិដែលបានផ្ញើមកពី MainLayout
-              onClick={(e) => navigate(e.key)}
+              openKeys={
+                openKeys
+              }
+              onOpenChange={
+                onOpenChange
+              }
+              selectedKeys={
+                [location?.pathname]
+              }
+              items={
+                menuItems && menuItems.length > 0 ? menuItems : []
+              }
+              onClick={
+                (e) => navigate(e.key)
+              }
               className='border-none custom-sidebar'
-              style={{ background: 'transparent' }}
+              style={
+                {
+                  background: 'transparent'
+                }
+              }
             />
           </div>
         </div>

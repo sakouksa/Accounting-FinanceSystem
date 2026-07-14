@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'role_id',
@@ -73,17 +74,29 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Payment::class, 'recorded_by');
     }
+    // public function getAllPermissionsAttribute()
+    // {
+    //     $rolePermissions = $this->role ? $this->role->permissions : collect();
 
-    public function permissions()
-    {
-        return $this->belongsToMany(Permission::class, 'user_permissions'); // បើមាន pivot table ដោយឡែក
-    }
+    //     $userPermissions = $this->permissions;
+
+    //     return $rolePermissions->merge($userPermissions)->unique('id');
+    // }
     public function getAllPermissionsAttribute()
     {
+        // យកសិទ្ធិពី Role ស្តង់ដារ + សិទ្ធិដែល Add ផ្ទាល់ (Custom)
         $rolePermissions = $this->role ? $this->role->permissions : collect();
-
-        $userPermissions = $this->permissions;
+        $userPermissions = $this->permissions; // ទំនាក់ទំនង Many-to-Many
 
         return $rolePermissions->merge($userPermissions)->unique('id');
+    }
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions');
+    }
+
+    public function hasPermission($code)
+    {
+        return $this->all_permissions->contains('code', $code);
     }
 }

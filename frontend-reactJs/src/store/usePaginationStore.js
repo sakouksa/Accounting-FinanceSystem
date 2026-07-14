@@ -1,32 +1,34 @@
-import {
-  create
-} from "zustand";
+import { useState, useCallback } from "react";
 
-export const usePaginationStore = create((set) => ({
-  pagination: {
+export const usePaginationStore = () => {
+  const [pagination, setPaginationState] = useState({
     page: 1,
     limit: 10,
     total: 0,
     txt_search: "",
     is_active: null,
-  },
+  });
 
-  setPagination: (updates) =>
-    set((state) => ({
-      pagination: {
-        ...state.pagination,
-        ...updates
-      }
-    })),
+  const setPagination = useCallback((updates) => {
+    setPaginationState((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  }, []);
 
-  resetPagination: () =>
-    set({
-      pagination: {
-        page: 1,
-        limit: 10,
-        total: 0,
-        txt_search: "",
-        is_active: null,
-      },
-    }),
-}));
+  const resetPagination = useCallback(() => {
+    setPaginationState({
+      page: 1,
+      limit: 10,
+      total: 0,
+      txt_search: "",
+      is_active: null,
+    });
+  }, []);
+
+  return {
+    pagination,
+    setPagination,
+    resetPagination,
+  };
+};

@@ -3,63 +3,45 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\BranchRequest;
-use App\Models\Branch;
+use App\Services\BranchService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class BranchController extends Controller
+class BranchController extends Controller implements HasMiddleware
 {
-    // LIST
-    public function index(Request $req)
+    protected $branchService;
+
+    public function __construct(BranchService $branchService)
     {
-        $query = Branch::query();
+        $this->branchService = $branchService;
+    }
 
-        if ($req->has("txt_search")) {
-            $query->where("name", "LIKE", "%" . $req->input("txt_search") . "%")
-                ->orWhere("code", "LIKE", "%" . $req->input("txt_search") . "%");
-        }
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:branches.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:branches.create', only: ['store']),
+            new Middleware('permission:branches.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:branches.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
 
-        if ($req->has("status")) {
-            $query->where("status", $req->input("status"));
-        }
+    // LIST
+    public function index(Request $request)
+    {
+        $paginator = $this->branchService->getAll($request);
 
-        $list = $query->orderBy('id', 'desc')->get();
-
-        return response()->json([
-            'list' => $list,
-            'total' => $list->count(),
-        ]);
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total()
+        );
     }
 
     // STATS
     public function stats()
     {
-        $stats = [
-            [
-                "title" => "សាខាសរុប",
-                "value" => Branch::count(),
-                "color" => "#6366f1",
-                "icon" => "ApartmentOutlined"
-            ],
-            [
-                "title" => "សាខាសកម្ម",
-                "value" => Branch::where('status', 'active')->count(),
-                "color" => "#10b981",
-                "icon" => "CheckCircleOutlined"
-            ],
-            [
-                "title" => "សាខាអសកម្ម",
-                "value" => Branch::where('status', 'inactive')->count(),
-                "color" => "#ef4444",
-                "icon" => "CloseCircleOutlined"
-            ],
-            [
-                "title" => "បង្កើតថ្ងៃនេះ",
-                "value" => Branch::whereDate('created_at', today())->count(),
-                "color" => "#f59e0b",
-                "icon" => "CalendarOutlined"
-            ]
-        ];
-
+        $stats = $this->branchService->getStats();
         return response()->json([
             'stats' => $stats
         ]);
@@ -68,88 +50,65 @@ class BranchController extends Controller
     // STORE
     public function store(BranchRequest $request)
     {
-        $branch = Branch::create($request->validated());
+        $branch = $this->branchService->createBranch($request->validated());
 
-        return response()->json([
-            'data' => $branch,
-            'message' => 'បានបង្កើតសាខាថ្មីដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($branch, 'បានបង្កើតសាខាថ្មីដោយជោគជ័យ', 201);
     }
 
     // SHOW
     public function show(string $id)
     {
-        return Branch::find($id);
+        $branch = $this->branchService->findById($id);
+        return $this->successResponse($branch);
     }
 
     // UPDATE
     public function update(BranchRequest $request, string $id)
     {
-        $branch = Branch::findOrFail($id);
-        $branch->update($request->validated());
+        $branch = $this->branchService->updateBranch($request->validated(), $id);
 
-        return response()->json([
-            'data' => $branch,
-            'message' => 'បានកែប្រែសាខាដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($branch, 'បានកែប្រែសាខាដោយជោគជ័យ');
     }
 
     // DELETE
     public function destroy(string $id)
     {
-        $branch = Branch::find($id);
-
-        if (!$branch) {
-            return [
-                'error' => true,
-                'message' => 'រកមិនឃើញសាខា',
-            ];
+        try {
+            $branch = $this->branchService->deleteBranch($id);
+            return $this->successResponse($branch, 'បានលុបសាខាដោយជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
         }
-
-        $branch->delete();
-
-        return [
-            'data' => $branch,
-            'message' => 'បានលុបសាខាដោយជោគជ័យ',
-        ];
     }
 
     // CHANGE STATUS
     public function changeStatus(Request $request, $id)
     {
-        $branch = Branch::find($id);
+        $request->validate([
+            'status' => 'required|in:active,inactive',
+        ]);
 
-        if (!$branch) {
-            return [
-                'error' => true,
-                'message' => 'រកមិនឃើញសាខា',
-            ];
-        }
+        $branch = $this->branchService->changeStatus($id, $request->input('status'));
 
-        $branch->status = $request->input('status');
-        $branch->save();
-
-        return [
-            'data' => $branch,
-            'message' => 'បានប្តូរស្ថានភាពដោយជោគជ័យ',
-        ];
+        return $this->successResponse($branch, 'បានប្តូរស្ថានភាពដោយជោគជ័យ');
     }
+
     public function bulkDelete(Request $request)
     {
-        $ids = $request->ids;
-
-        Branch::whereIn('id', $ids)->delete();
-
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:branches,id',
         ]);
+
+        $this->branchService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបជោគជ័យ');
     }
+
     public function deleteAll()
     {
-        Branch::truncate();
+        $this->branchService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបទាំងអស់ជោគជ័យ'
-        ]);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

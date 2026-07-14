@@ -3,148 +3,103 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\RoleRequest;
-use App\Models\Role;
+use App\Services\RoleService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class RoleController extends Controller
+class RoleController extends Controller implements HasMiddleware
 {
-    // Display a listing of the resource.
-    public function index(Request $req)
+    protected $roleService;
+
+    public function __construct(RoleService $roleService)
     {
-        $role = Role::query();
-
-        if ($req->filled('txt_search')) {
-            $role->where('name', 'LIKE', '%'.$req->input('txt_search').'%');
-        }
-
-        if ($req->filled('status')) {
-            $role->where('status', '=', $req->input('status'));
-        }
-
-        $limit = $req->input('limit', 10);
-        $paginated = $role->orderBy('id', 'desc')->paginate($limit);
-
-        return response()->json([
-            'list' => $paginated->items(),
-            'total' => $paginated->total(),
-        ]);
+        $this->roleService = $roleService;
     }
 
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:roles.read', only: ['index', 'show', 'stats', 'getAllPermissionsList']),
+            new Middleware('permission:roles.create', only: ['store']),
+            new Middleware('permission:roles.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:roles.delete', only: ['destroy']),
+        ];
+    }
+
+    // LIST
+    public function index(Request $request)
+    {
+        $paginator = $this->roleService->getAll($request);
+
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total()
+        );
+    }
+
+    // GET ALL PERMISSIONS
     public function getAllPermissionsList()
     {
-        $permissions = \DB::table('permissions')->get();
+        $permissions = $this->roleService->getAllPermissionsList();
 
         return response()->json([
             'list' => $permissions,
         ]);
     }
 
+    // STATS
     public function stats()
     {
-        $stats = [
-            [
-                'title' => 'តួនាទីសរុប',
-                'value' => Role::count(),
-                'percent' => '+12%',
-                'isUp' => true,
-                'color' => '#6366f1',
-                'icon' => 'SafetyOutlined',
-            ],
-            [
-                'title' => 'តួនាទីសកម្ម',
-                'value' => Role::where('status', 'active')->count(),
-                'percent' => '+5%',
-                'isUp' => true,
-                'color' => '#10b981',
-                'icon' => 'CheckCircleOutlined',
-            ],
-            [
-                'title' => 'តួនាទីអសកម្ម',
-                'value' => Role::where('status', 'inactive')->count(),
-                'percent' => '-2%',
-                'isUp' => false,
-                'color' => '#ef4444',
-                'icon' => 'CloseCircleOutlined',
-            ],
-            [
-                'title' => 'បង្កើតថ្ងៃនេះ',
-                'value' => Role::whereDate('created_at', today())->count(),
-                'percent' => '+8%',
-                'isUp' => true,
-                'color' => '#f59e0b',
-                'icon' => 'CalendarOutlined',
-            ],
-        ];
-
+        $stats = $this->roleService->getStats();
         return response()->json([
             'stats' => $stats,
         ]);
     }
 
-    // Store a newly created resource in storage.
+    // STORE
     public function store(RoleRequest $request)
     {
-        $role = Role::create($request->validated());
+        $role = $this->roleService->createRole($request->validated());
 
-        return response()->json([
-            'data' => $role,
-            'message' => 'បានបង្កើតតួនាទីថ្មីដោយជោគជ័យ',
-        ], 200);
+        return $this->successResponse($role, 'បានបង្កើតតួនាទីថ្មីដោយជោគជ័យ', 201);
     }
 
-    // Display the specified resource.
+    // SHOW
     public function show(string $id)
     {
-        return Role::find($id);
+        $role = $this->roleService->findById($id);
+        return $this->successResponse($role);
     }
 
-    // Update the specified resource in storage.
+    // UPDATE
     public function update(RoleRequest $request, string $id)
     {
-        $role = Role::findOrFail($id);
-        $role->update($request->validated());
+        $role = $this->roleService->updateRole($request->validated(), $id);
 
-        return response()->json([
-            'data' => $role,
-            'message' => 'បានកែប្រែទិន្នន័យដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($role, 'បានកែប្រែទិន្នន័យដោយជោគជ័យ');
     }
 
-    // Remove the specified resource from storage.
+    // DELETE
     public function destroy(string $id)
     {
-        $role = Role::find($id);
-        if (! $role) {
-            return [
-                'error' => false,
-                'message' => 'រកមិនឃើញទិន្នន័យឡើយ',
-            ];
-        } else {
-            $role->delete();
-
-            return [
-                'data' => $role,
-                'message' => 'បានលុបទិន្នន័យដោយជោគជ័យ',
-            ];
+        try {
+            $role = $this->roleService->deleteRole($id);
+            return $this->successResponse($role, 'បានលុបទិន្នន័យដោយជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
         }
     }
 
+    // CHANGE STATUS
     public function changeStatus(Request $request, $id)
     {
-        $role = Role::find($id);
-        if (! $role) {
-            return [
-                'error' => true,
-                'message' => 'រកមិនឃើញតួនាទីឡើយ',
-            ];
-        } else {
-            $role->status = $request->input('status');
-            $role->update();
+        $request->validate([
+            'status' => 'required|in:active,inactive',
+        ]);
 
-            return [
-                'data' => $role,
-                'message' => 'ស្ថានភាពត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ',
-            ];
-        }
+        $role = $this->roleService->changeStatus($id, $request->input('status'));
+
+        return $this->successResponse($role, 'ស្ថានភាពត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ');
     }
 }

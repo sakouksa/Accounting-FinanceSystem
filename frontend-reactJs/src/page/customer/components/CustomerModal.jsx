@@ -116,7 +116,7 @@ function CustomerModal ({ open, setState, editingCustomer, onSuccess }) {
       centered
       width={900}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form form={form} layout='vertical' onFinish={onFinish}>
         <Form.Item name='id' hidden>

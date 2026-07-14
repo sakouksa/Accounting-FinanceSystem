@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   Card,
   Row,
@@ -7,7 +7,6 @@ import {
   Table,
   Tag,
   Progress,
-  Avatar,
   Space
 } from 'antd'
 import {
@@ -37,7 +36,7 @@ import {
 import { Line, Doughnut } from 'react-chartjs-2'
 import MainPage from '../../components/layout/MainPage'
 import { useDashboard } from './hooks/useDashboard'
-import { FaRegUser } from 'react-icons/fa'
+
 // Register ChartJS modules
 ChartJS.register(
   CategoryScale,
@@ -54,6 +53,30 @@ ChartJS.register(
 
 const { Title: AntTitle, Text, Link } = Typography
 
+// Pure helper function pulled outside component to prevent recreation on every render
+const getActivityIcon = type => {
+  const typeClean = type?.toUpperCase()
+
+  if (typeClean?.includes('ADV')) {
+    return { icon: <FileTextOutlined />, bg: 'bg-cyan-50 text-cyan-500' }
+  }
+
+  switch (typeClean) {
+    case 'SALE':
+    case 'REC':
+      return {
+        icon: <DollarOutlined />,
+        bg: 'bg-emerald-50 text-emerald-500'
+      }
+    case 'PAY':
+      return { icon: <ShoppingCartOutlined />, bg: 'bg-red-50 text-red-500' }
+    case 'JV':
+      return { icon: <FileTextOutlined />, bg: 'bg-blue-50 text-blue-500' }
+    default:
+      return { icon: <SwapOutlined />, bg: 'bg-purple-50 text-purple-500' }
+  }
+}
+
 const HomePage = () => {
   const { state } = useDashboard()
 
@@ -64,182 +87,159 @@ const HomePage = () => {
   const recentTransactions = state?.recentTransactions ?? []
   const recentActivities = state?.recentActivities ?? []
 
-  // Configuration for top statistics cards
-  const cardStats = [
-    {
-      title: 'ចំណូលសរុប (Total Revenue)',
-      value: `$${Number(stats.totalRevenue ?? 0).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })}`,
-      percent: `${stats.revenuePercent ?? '0.0'}%`,
-      isUp: stats.isRevenueUp ?? true,
-      color: '#10b981',
-      icon: <DollarOutlined />
-    },
-    {
-      title: 'អ្នកប្រើប្រាស់ក្នុងប្រព័ន្ធ (Active Users)',
-      value: Number(stats.activeUsers ?? 0).toLocaleString(),
-      percent: 'ស្ថិរភាព',
-      isUp: true,
-      color: '#3b82f6',
-      icon: <UserOutlined />
-    },
-    {
-      title: 'ប្រតិបត្តិការសរុប (Total Transactions)',
-      value: Number(stats.totalTransactions ?? 0).toLocaleString(),
-      percent: `${stats.trxPercent ?? '0.0'}%`,
-      isUp: stats.isTrxUp ?? true,
-      color: '#8b5cf6',
-      icon: <SwapOutlined />
-    },
-    {
-      title: 'ការពិនិត្យសវនកម្ម (Audit Logs Count)',
-      value: Number(stats.pageViews ?? 0).toLocaleString(),
-      percent: 'សុវត្ថិភាព',
-      isUp: true,
-      color: '#f59e0b',
-      icon: <EyeOutlined />
+  // Memoized top statistics cards config
+  const cardStats = useMemo(() => {
+    return [
+      {
+        title: 'ចំណូលសរុប (Total Revenue)',
+        value: `$${Number(stats.totalRevenue ?? 0).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}`,
+        percent: `${stats.revenuePercent ?? '0.0'}%`,
+        isUp: stats.isRevenueUp ?? true,
+        color: '#10b981',
+        icon: <DollarOutlined />
+      },
+      {
+        title: 'អ្នកប្រើប្រាស់ក្នុងប្រព័ន្ធ (Active Users)',
+        value: Number(stats.activeUsers ?? 0).toLocaleString(),
+        percent: 'ស្ថិរភាព',
+        isUp: true,
+        color: '#3b82f6',
+        icon: <UserOutlined />
+      },
+      {
+        title: 'ប្រតិបត្តិការសរុប (Total Transactions)',
+        value: Number(stats.totalTransactions ?? 0).toLocaleString(),
+        percent: `${stats.trxPercent ?? '0.0'}%`,
+        isUp: stats.isTrxUp ?? true,
+        color: '#8b5cf6',
+        icon: <SwapOutlined />
+      },
+      {
+        title: 'ការពិនិត្យសវនកម្ម (Audit Logs Count)',
+        value: Number(stats.pageViews ?? 0).toLocaleString(),
+        percent: 'សុវត្ថិភាព',
+        isUp: true,
+        color: '#f59e0b',
+        icon: <EyeOutlined />
+      }
+    ]
+  }, [stats])
+
+  // Memoized Line Chart Data
+  const mainChartData = useMemo(() => {
+    return {
+      labels: overviewChart.labels,
+      datasets: [
+        {
+          label: 'លំហូរចំណូលសរុប ($)',
+          data: overviewChart.data,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          tension: 0.4
+        }
+      ]
     }
-  ]
+  }, [overviewChart])
 
-  // Data structure for the Line chart (Financial Overview)
-  const mainChartData = {
-    labels: overviewChart.labels,
-    datasets: [
+  // Memoized Doughnut Chart Data
+  const trafficData = useMemo(() => {
+    return {
+      labels: [
+        'ប្រព័ន្ធ POS',
+        'វិក្កយបត្រដៃ (Invoice)',
+        'បំណុលចាស់ (AR)',
+        'សវនកម្មផ្ទាល់ (JV)'
+      ],
+      datasets: [
+        {
+          data: trafficSources,
+          backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#ec4899'],
+          borderWidth: 0
+        }
+      ]
+    }
+  }, [trafficSources])
+
+  // Memoized Table columns definition for Recent Transactions
+  const columns = useMemo(() => {
+    return [
       {
-        label: 'លំហូរចំណូលសរុប ($)',
-        data: overviewChart.data,
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        fill: true,
-        tension: 0.4
-      }
-    ]
-  }
-
-  // Data structure for the Doughnut chart (Transaction Entry)
-  const trafficData = {
-    labels: [
-      'ប្រព័ន្ធ POS',
-      'វិក្កយបត្រដៃ (Invoice)',
-      'បំណុលចាស់ (AR)',
-      'សវនកម្មផ្ទាល់ (JV)'
-    ],
-    datasets: [
-      {
-        data: trafficSources,
-        backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#ec4899'],
-        borderWidth: 0
-      }
-    ]
-  }
-
-  // Table columns definition for Recent Transactions
-  const columns = [
-    {
-      title: 'បេក្ខជន/អតិថិជន',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text, r) => {
-        // Explicitly check if avatar exists and is not an empty string
-        const hasAvatar = r.avatar && r.avatar.trim() !== ''
-
-        return (
+        title: 'បេក្ខជន/អតិថិជន',
+        dataIndex: 'name',
+        key: 'name',
+        render: (text, r) => (
           <Space>
-
             <div>
               <div className='font-bold text-gray-700'>{text}</div>
               <div className='text-xs text-gray-400'>{r.email}</div>
             </div>
           </Space>
         )
-      }
-    },
-    {
-      title: 'លេខកូដប្រតិបត្តិការ',
-      dataIndex: 'transaction_no',
-      key: 'transaction_no',
-      render: text => (
-        <span className='font-mono font-medium text-blue-600'>{text}</span>
-      )
-    },
-    {
-      title: 'បរិយាយ / ព័ត៌មានយោង',
-      dataIndex: 'description',
-      key: 'description'
-    },
-    {
-      title: 'ស្ថានភាព',
-      dataIndex: 'status',
-      key: 'status',
-      render: s => {
-        let color = 'orange'
-        let textKh = 'រង់ចាំពិនិត្យ'
-
-        // Dynamic status coloring based on backend string response
-        const statusClean = s?.toLowerCase()
-        if (
-          statusClean === 'completed' ||
-          statusClean === 'approved' ||
-          statusClean === 'ជោគជ័យ' ||
-          statusClean === 'posted'
-        ) {
-          color = 'green'
-          textKh = 'អនុម័តរួច (Posted)'
-        } else if (statusClean === 'pending' || statusClean === 'រង់ចាំ') {
-          color = 'orange'
-          textKh = 'រង់ចាំការអនុម័ត'
-        } else if (
-          statusClean === 'rejected' ||
-          statusClean === 'banned' ||
-          statusClean === 'voided'
-        ) {
-          color = 'red'
-          textKh = 'បដិសេធ (Voided)'
-        } else if (statusClean === 'draft' || statusClean === 'ព្រាង') {
-          color = 'gray'
-          textKh = 'ឯកសារព្រាង (Draft)'
-        }
-
-        return (
-          <Tag color={color} className='rounded-md px-2'>
-            {textKh}
-          </Tag>
+      },
+      {
+        title: 'លេខកូដប្រតិបត្តិការ',
+        dataIndex: 'transaction_no',
+        key: 'transaction_no',
+        render: text => (
+          <span className='font-mono font-medium text-blue-600'>{text}</span>
         )
-      }
-    },
-    {
-      title: 'ទឹកប្រាក់',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: a => <b className='text-gray-800'>${Number(a).toFixed(2)}</b>
-    }
-  ]
+      },
+      {
+        title: 'បរិយាយ / ព័ត៌មានយោង',
+        dataIndex: 'description',
+        key: 'description'
+      },
+      {
+        title: 'ស្ថានភាព',
+        dataIndex: 'status',
+        key: 'status',
+        render: s => {
+          let color = 'orange'
+          let textKh = 'รង់ចាំពិនិត្យ'
 
-  // Dynamic mapper for Audit Log icons based on transaction type
-  const getActivityIcon = type => {
-    const typeClean = type?.toUpperCase()
+          const statusClean = s?.toLowerCase()
+          if (
+            statusClean === 'completed' ||
+            statusClean === 'approved' ||
+            statusClean === 'ជោគជ័យ' ||
+            statusClean === 'posted'
+          ) {
+            color = 'green'
+            textKh = 'អនុម័តរួច (Posted)'
+          } else if (statusClean === 'pending' || statusClean === 'រង់ចាំ') {
+            color = 'orange'
+            textKh = 'រង់ចាំការអនុម័ត'
+          } else if (
+            statusClean === 'rejected' ||
+            statusClean === 'banned' ||
+            statusClean === 'voided'
+          ) {
+            color = 'red'
+            textKh = 'បដិសេធ (Voided)'
+          } else if (statusClean === 'draft' || statusClean === 'ព្រាង') {
+            color = 'gray'
+            textKh = 'ឯកសារព្រាង (Draft)'
+          }
 
-    if (typeClean?.includes('ADV')) {
-      return { icon: <FileTextOutlined />, bg: 'bg-cyan-50 text-cyan-500' }
-    }
-
-    switch (typeClean) {
-      case 'SALE':
-      case 'REC':
-        return {
-          icon: <DollarOutlined />,
-          bg: 'bg-emerald-50 text-emerald-500'
+          return (
+            <Tag color={color} className='rounded-md px-2'>
+              {textKh}
+            </Tag>
+          )
         }
-      case 'PAY':
-        return { icon: <ShoppingCartOutlined />, bg: 'bg-red-50 text-red-500' }
-      case 'JV':
-        return { icon: <FileTextOutlined />, bg: 'bg-blue-50 text-blue-500' }
-      default:
-        return { icon: <SwapOutlined />, bg: 'bg-purple-50 text-purple-500' }
-    }
-  }
+      },
+      {
+        title: 'ទឹកប្រាក់',
+        dataIndex: 'amount',
+        key: 'amount',
+        render: a => <b className='text-gray-800'>${Number(a).toFixed(2)}</b>
+      }
+    ]
+  }, [])
 
   return (
     <MainPage loading={state?.loading}>
@@ -250,7 +250,7 @@ const HomePage = () => {
             <Col xs={24} sm={12} lg={6} key={index}>
               <Card
                 className='rounded-xl border-none shadow-sm overflow-hidden relative'
-                bordered={false}
+                variant='borderless'
               >
                 <div className='flex justify-between items-start'>
                   <div>
@@ -297,7 +297,7 @@ const HomePage = () => {
               title='គំនូសលំហូរហិរញ្ញវត្ថុទូទៅ (Financial Overview)'
               extra={<Text type='secondary'>ស្ថិតិប្រចាំខែក្នុងឆ្នាំនេះ</Text>}
               className='rounded-xl border-none shadow-sm h-full'
-              bordered={false}
+              variant='borderless'
             >
               <div className='h-[350px]'>
                 <Line
@@ -318,7 +318,7 @@ const HomePage = () => {
               <Card
                 title='ប្រភពនៃប្រតិបត្តិការ (Transaction Entry)'
                 className='rounded-xl border-none shadow-sm'
-                bordered={false}
+                variant='borderless'
               >
                 <div className='flex flex-col items-center'>
                   <div className='h-[180px] w-full'>
@@ -355,7 +355,7 @@ const HomePage = () => {
               <Card
                 title='សេចក្តីសង្ខេបគណនេយ្យ (AR & AP Summary)'
                 className='rounded-xl border-none shadow-sm text-xs'
-                bordered={false}
+                variant='borderless'
               >
                 <div className='space-y-4'>
                   <div>
@@ -406,13 +406,13 @@ const HomePage = () => {
               title='ប្រតិបត្តិការថ្មីៗ (Recent Transactions)'
               extra={<Link href='/transactions'>មើលទាំងអស់</Link>}
               className='rounded-xl border-none shadow-sm overflow-hidden'
-              bordered={false}
+              variant='borderless'
             >
               <Table
                 columns={columns}
                 dataSource={recentTransactions}
                 pagination={false}
-                rowKey={record => record.key}
+                rowKey={record => record.key || record.id}
               />
             </Card>
           </Col>
@@ -421,7 +421,7 @@ const HomePage = () => {
               title='ប្រវត្តិកត់ត្រាសកម្មភាពសវនកម្ម (Audit Logs)'
               extra={<MoreOutlined />}
               className='rounded-xl border-none shadow-sm h-full'
-              bordered={false}
+              variant='borderless'
             >
               <div className='space-y-6'>
                 {recentActivities.map((act, i) => {

@@ -7,14 +7,26 @@ use App\Models\Branch;
 use App\Services\ReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ReportController extends Controller
+class ReportController extends Controller implements HasMiddleware
 {
     protected $reportService;
 
     public function __construct(ReportService $reportService)
     {
         $this->reportService = $reportService;
+    }
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:reports.read', only: ['index', 'show', 'getStats']),
+            new Middleware('permission:reports.create', only: ['store']),
+            new Middleware('permission:reports.update', only: ['update']),
+            new Middleware('permission:reports.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
     }
 
     // LIST
@@ -31,11 +43,15 @@ class ReportController extends Controller
             return $report;
         });
 
-        return response()->json([
-            'list' => $items,
-            'total' => $paginator->total(),
-            'branches' => Branch::select('id', 'name', 'code')->where('status', 'active')->get(),
-        ]);
+        return $this->paginatedResponse(
+            $items,
+            $paginator->total(),
+            200,
+            'Success',
+            [
+                'branches' => Branch::select('id', 'name', 'code')->where('status', 'active')->get()
+            ]
+        );
     }
 
     // GET STATS
@@ -44,14 +60,9 @@ class ReportController extends Controller
         try {
             $stats = $this->reportService->getStats();
 
-            return response()->json([
-                'stats' => $stats,
-                'message' => 'ទាញទិន្នន័យស្ថិតិជោគជ័យ',
-            ]);
+            return $this->successResponse($stats, 'ទាញទិន្នន័យស្ថិតិជោគជ័យ');
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'មិនអាចទាញទិន្នន័យស្ថិតិបានទេ: '.$e->getMessage(),
-            ], 500);
+            return $this->errorResponse('មិនអាចទាញទិន្នន័យស្ថិតិបានទេ: '.$e->getMessage(), 500);
         }
     }
 
@@ -79,10 +90,7 @@ class ReportController extends Controller
 
         $report = $this->reportService->createReport($data);
 
-        return response()->json([
-            'data' => $report,
-            'message' => 'បានបង្កើតទិន្នន័យរបាយការណ៍ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($report, 'បានបង្កើតទិន្នន័យរបាយការណ៍ដោយជោគជ័យ', 201);
     }
 
     // UPDATE
@@ -117,10 +125,7 @@ class ReportController extends Controller
 
         $report = $this->reportService->updateReport($data, $id);
 
-        return response()->json([
-            'data' => $report,
-            'message' => 'បានកែប្រែទិន្នន័យរបាយការណ៍ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($report, 'បានកែប្រែទិន្នន័យរបាយការណ៍ដោយជោគជ័យ');
     }
 
     // SHOW
@@ -132,9 +137,7 @@ class ReportController extends Controller
             $report->file_path = asset('storage/'.$report->file_path);
         }
 
-        return response()->json([
-            'data' => $report,
-        ]);
+        return $this->successResponse($report);
     }
 
     // DELETE
@@ -143,24 +146,30 @@ class ReportController extends Controller
         try {
             $report = $this->reportService->deleteReport($id);
 
-            return response()->json([
-                'data' => $report,
-                'message' => 'បានលុបទិន្នន័យរបាយការណ៍ដោយជោគជ័យ',
-            ]);
+            return $this->successResponse($report, 'បានលុបទិន្នន័យរបាយការណ៍ដោយជោគជ័យ');
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 400);
+            return $this->errorResponse($e->getMessage(), 400);
         }
     }
 
     // BULK DELETE
     public function bulkDelete(Request $request)
     {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:reports,id',
+        ]);
+
         $this->reportService->bulkDelete($request->get('ids', []));
 
-        return response()->json([
-            'message' => 'លុបទិន្នន័យរបាយការណ៍ដែលជ្រើសរើសជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទិន្នន័យរបាយការណ៍ដែលជ្រើសរើសជោគជ័យ');
+    }
+
+    // DELETE ALL
+    public function deleteAll()
+    {
+        $this->reportService->deleteAll();
+
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

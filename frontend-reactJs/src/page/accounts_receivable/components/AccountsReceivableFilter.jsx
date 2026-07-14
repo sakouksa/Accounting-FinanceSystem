@@ -76,7 +76,7 @@ function AccountsReceivableFilter ({
                 status: value
               })
             }
-            dropdownStyle={{ textAlign: 'left' }}
+            styles={{ popup: { root: { textAlign: 'left' } } }}
             optionRender={option => {
               const colors = {
                 unpaid: { dot: 'bg-red-500', text: 'text-red-600' },

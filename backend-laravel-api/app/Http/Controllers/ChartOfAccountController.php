@@ -3,178 +3,145 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ChartOfAccountRequest;
-use App\Models\AccountType;
-use App\Models\ChartOfAccount;
+use App\Services\ChartOfAccountService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ChartOfAccountController extends Controller
+class ChartOfAccountController extends Controller implements HasMiddleware
 {
+    protected $coaService;
+
+    public function __construct(ChartOfAccountService $coaService)
+    {
+        $this->coaService = $coaService;
+    }
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:chart_of_accounts.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:chart_of_accounts.create', only: ['store']),
+            new Middleware('permission:chart_of_accounts.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:chart_of_accounts.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
+
+    // LIST
     public function index(Request $request)
     {
         try {
-            $query = ChartOfAccount::query();
+            $paginator = $this->coaService->getAll($request);
 
-            if ($request->filled('txt_search')) {
-                $search = trim($request->txt_search);
-                $query->where(function ($q) use ($search) {
-                    $q->where('account_code', 'LIKE', "%{$search}%")
-                        ->orWhere('account_name', 'LIKE', "%{$search}%");
-                });
-            }
-
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
-
-            if ($request->filled('account_type_id')) {
-                $query->where('account_type_id', $request->account_type_id);
-            }
-
-            if ($request->filled('parent_account_id')) {
-                $query->where('parent_account_id', $request->parent_account_id);
-            }
-
-            $perPage = $request->get('limit', 20);
-
-            $list = $query->with(['accountType', 'parent'])
-                ->orderBy('account_code', 'asc')
-                ->paginate($perPage);
-
-            return response()->json([
-                'list' => $list->items(),
-                'total' => $list->total(),
-                'account_types' => AccountType::select('id as account_type_id', 'name', 'code')->get(),
-                'parent_accounts' => ChartOfAccount::select('id as parent_account_id', 'account_name')->get(),
-            ]);
+            return $this->paginatedResponse(
+                $paginator->items(),
+                $paginator->total(),
+                200,
+                'Success',
+                [
+                    'account_types' => $this->coaService->getAccountTypesLookup(),
+                    'parent_accounts' => $this->coaService->getParentAccountsLookup(),
+                ]
+            );
         } catch (\Exception $e) {
             \Log::error('ChartOfAccount Error: '.$e->getMessage());
-
-            return response()->json([
-                'errors' => true,
-                'message' => 'ទាញទិន្នន័យបរាជ័យ: '.$e->getMessage(),
-            ], 500);
+            return $this->errorResponse('ទាញទិន្នន័យបរាជ័យ: '.$e->getMessage(), 500);
         }
     }
 
+    // STATS
     public function stats()
     {
-        $stats = [
-            [
-                'title' => 'គណនីសរុប',
-                'value' => ChartOfAccount::count(),
-                'color' => '#6366f1',
-                'icon' => 'AccountBookOutlined',
-            ],
-            [
-                'title' => 'សកម្ម',
-                'value' => ChartOfAccount::where('status', 'Active')->count(),
-                'color' => '#10b981',
-                'icon' => 'CheckCircleOutlined',
-            ],
-            [
-                'title' => 'អសកម្ម',
-                'value' => ChartOfAccount::where('status', 'Inactive')->count(),
-                'color' => '#ef4444',
-                'icon' => 'CloseCircleOutlined',
-            ],
-            [
-                'title' => 'បង្កើតថ្ងៃនេះ',
-                'value' => ChartOfAccount::whereDate('created_at', today())->count(),
-                'color' => '#f59e0b',
-                'icon' => 'CalendarOutlined',
-            ],
-        ];
-
+        $stats = $this->coaService->getStats();
         return response()->json(['stats' => $stats]);
     }
 
+    // STORE
     public function store(ChartOfAccountRequest $request)
     {
         $data = $request->validated();
 
-        // force safe casting (important for INSERT)
         $data['is_system'] = (bool) ($data['is_system'] ?? false);
         $data['allow_transaction'] = (bool) ($data['allow_transaction'] ?? true);
-
         $data['opening_balance'] = (float) ($data['opening_balance'] ?? 0);
         $data['current_balance'] = (float) ($data['current_balance'] ?? 0);
         $data['account_level'] = (int) ($data['account_level'] ?? 1);
-
         $data['parent_account_id'] = $data['parent_account_id'] ?? null;
 
-        $account = ChartOfAccount::create($data);
+        $account = $this->coaService->createChartOfAccount($data);
 
-        return response()->json([
-            'data' => $account->load(['accountType', 'parent']),
-            'message' => 'បានបង្កើតគណនីដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($account->load(['accountType', 'parent']), 'បានបង្កើតគណនីដោយជោគជ័យ', 201);
     }
 
+    // SHOW
+    public function show(string $id)
+    {
+        $account = $this->coaService->findById($id);
+        return $this->successResponse($account);
+    }
+
+    // UPDATE
     public function update(ChartOfAccountRequest $request, string $id)
     {
         try {
-            $account = ChartOfAccount::findOrFail($id);
-
             $data = $request->validated();
-
             $data['is_system'] = (bool) ($data['is_system'] ?? false);
             $data['allow_transaction'] = (bool) ($data['allow_transaction'] ?? true);
 
-            $account->update($data);
+            $account = $this->coaService->updateChartOfAccount($data, $id);
 
-            return response()->json([
-                'data' => $account->load(['accountType', 'parent']),
-                'message' => 'កែប្រែជោគជ័យ',
-            ]);
+            return $this->successResponse($account->load(['accountType', 'parent']), 'កែប្រែជោគជ័យ');
         } catch (\Exception $e) {
-            return response()->json([
-                'errors' => true,
-                'message' => 'កែប្រែបរាជ័យ',
-            ], 500);
+            return $this->errorResponse('កែប្រែបរាជ័យ: '.$e->getMessage(), 500);
         }
     }
 
+    // DELETE
     public function destroy(string $id)
     {
-        $account = ChartOfAccount::find($id);
-        if (! $account) {
-            return response()->json(['error' => true, 'message' => 'រកមិនឃើញគណនី']);
+        try {
+            $account = $this->coaService->findById($id);
+
+            if ($account->children()->count() > 0) {
+                return $this->errorResponse('មិនអាចលុបគណនីដែលមានគណនីកូន', 400);
+            }
+
+            $this->coaService->deleteChartOfAccount($id);
+
+            return $this->successResponse($account, 'លុបជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
         }
-
-        if ($account->children()->count() > 0) {
-            return response()->json(['error' => true, 'message' => 'មិនអាចលុបគណនីដែលមានគណនីកូន']);
-        }
-
-        $account->delete();
-
-        return response()->json(['message' => 'លុបជោគជ័យ']);
     }
 
+    // CHANGE STATUS
     public function changeStatus(Request $request, $id)
     {
-        $account = ChartOfAccount::find($id);
-        if (! $account) {
-            return response()->json(['error' => true, 'message' => 'រកមិនឃើញគណនី']);
-        }
+        $request->validate([
+            'status' => 'required|string',
+        ]);
 
-        $account->status = $request->status;
-        $account->save();
+        $account = $this->coaService->changeStatus($id, $request->status);
 
-        return response()->json(['message' => 'ប្តូរស្ថានភាពជោគជ័យ']);
+        return $this->successResponse($account, 'ប្តូរស្ថានភាពជោគជ័យ');
     }
 
     public function bulkDelete(Request $request)
     {
-        $ids = $request->ids ?? [];
-        ChartOfAccount::whereIn('id', $ids)->delete();
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:chart_of_accounts,id',
+        ]);
 
-        return response()->json(['message' => 'លុបជោគជ័យ']);
+        $this->coaService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបជោគជ័យ');
     }
 
     public function deleteAll()
     {
-        ChartOfAccount::query()->delete();
+        $this->coaService->deleteAll();
 
-        return response()->json(['message' => 'លុបទាំងអស់ជោគជ័យ']);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

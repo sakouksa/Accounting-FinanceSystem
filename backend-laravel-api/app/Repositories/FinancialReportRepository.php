@@ -147,4 +147,18 @@ class FinancialReportRepository
 
         return ltrim(trim($cleanPath), '/');
     }
+
+    public function deleteAll()
+    {
+        $reports = FinancialReport::all();
+
+        foreach ($reports as $item) {
+            if ($item->file_path && Storage::disk('public')->exists($item->file_path)) {
+                Storage::disk('public')->delete($item->file_path);
+            }
+            $item->delete();
+        }
+
+        return true;
+    }
 }

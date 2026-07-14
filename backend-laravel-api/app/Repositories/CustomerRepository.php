@@ -12,8 +12,7 @@ class CustomerRepository
         $query = Customer::query();
 
         if ($request->filled('txt_search')) {
-
-            $search = $request->txt_search;
+            $search = trim($request->txt_search);
 
             $query->where(function ($q) use ($search) {
                 $q->where('customer_code', 'LIKE', "%{$search}%")
@@ -26,7 +25,9 @@ class CustomerRepository
             $query->where('status', $request->status);
         }
 
-        return $query->latest()->get();
+        $limit = $request->get('limit', 10);
+
+        return $query->latest()->paginate($limit);
     }
 
     public function getStats()

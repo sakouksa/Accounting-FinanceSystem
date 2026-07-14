@@ -3,79 +3,48 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PaymentMethodRequest;
-use App\Models\PaymentMethod;
+use App\Services\PaymentMethodService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class PaymentMethodController extends Controller
+class PaymentMethodController extends Controller implements HasMiddleware
 {
+    protected $paymentMethodService;
+
+    public function __construct(PaymentMethodService $paymentMethodService)
+    {
+        $this->paymentMethodService = $paymentMethodService;
+    }
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:payment_methods.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:payment_methods.create', only: ['store']),
+            new Middleware('permission:payment_methods.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:payment_methods.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
+
     // LIST
     public function index(Request $request)
     {
-        $query = PaymentMethod::query();
+        $paginator = $this->paymentMethodService->getAll($request);
 
-        // filter by id
-        if ($request->has('id')) {
-            $query->where('id', $request->input('id'));
-        }
-
-        // search
-        if ($request->has('txt_search')) {
-
-            $search = $request->input('txt_search');
-
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', '%'.$search.'%')
-                    ->orWhere('account_name', 'LIKE', '%'.$search.'%')
-                    ->orWhere('account_number', 'LIKE', '%'.$search.'%');
-            });
-        }
-
-        // status
-        if ($request->has('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        $list = $query->orderBy('id', 'desc')->get();
-
-        return response()->json([
-            'list' => $list,
-            'total' => $list->count(),
-        ]);
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total()
+        );
     }
 
     // STATS
     public function stats()
     {
-        $stats = [
-            [
-                'title' => 'វិធីបង់ប្រាក់សរុប',
-                'value' => PaymentMethod::count(),
-                'color' => '#6366f1',
-                'icon' => 'CreditCardOutlined',
-            ],
-            [
-                'title' => 'កំពុងប្រើ',
-                'value' => PaymentMethod::where('status', 'active')->count(),
-                'color' => '#10b981',
-                'icon' => 'CheckCircleOutlined',
-            ],
-            [
-                'title' => 'មិនប្រើ',
-                'value' => PaymentMethod::where('status', 'inactive')->count(),
-                'color' => '#ef4444',
-                'icon' => 'CloseCircleOutlined',
-            ],
-            [
-                'title' => 'បង្កើតថ្ងៃនេះ',
-                'value' => PaymentMethod::whereDate('created_at', today())->count(),
-                'color' => '#f59e0b',
-                'icon' => 'CalendarOutlined',
-            ],
-        ];
-
+        $stats = $this->paymentMethodService->getStats();
         return response()->json([
-            'stats' => $stats,
+            'stats' => $stats
         ]);
     }
 
@@ -86,175 +55,87 @@ class PaymentMethodController extends Controller
 
         // upload qr image
         if ($request->hasFile('qr_code')) {
-
             $file = $request->file('qr_code');
-
             $filename = time().'_'.$file->getClientOriginalName();
-
-            $path = $file->storeAs(
-                'payment-methods',
-                $filename,
-                'public'
-            );
-
+            $path = $file->storeAs('payment-methods', $filename, 'public');
             $data['qr_code'] = $path;
         }
 
-        $paymentMethod = PaymentMethod::create($data);
+        $paymentMethod = $this->paymentMethodService->createPaymentMethod($data);
 
-        return response()->json([
-            'data' => $paymentMethod,
-            'message' => 'បានបង្កើតវិធីបង់ប្រាក់ដោយជោគជ័យ',
-        ], 201);
+        return $this->successResponse($paymentMethod, 'បានបង្កើតវិធីបង់ប្រាក់ដោយជោគជ័យ', 201);
     }
 
     // SHOW
     public function show(string $id)
     {
-        $paymentMethod = PaymentMethod::find($id);
-
-        if (! $paymentMethod) {
-            return response()->json([
-                'message' => 'រកមិនឃើញវិធីបង់ប្រាក់',
-            ], 404);
-        }
-
-        return response()->json([
-            'data' => $paymentMethod,
-        ]);
+        $paymentMethod = $this->paymentMethodService->findById($id);
+        return $this->successResponse($paymentMethod);
     }
 
     // UPDATE
     public function update(PaymentMethodRequest $request, string $id)
     {
-        $paymentMethod = PaymentMethod::findOrFail($id);
-
+        $paymentMethod = $this->paymentMethodService->findById($id);
         $data = $request->validated();
 
         // upload new qr image
         if ($request->hasFile('qr_code')) {
-
             // delete old image
-            if (
-                $paymentMethod->qr_code &&
-                Storage::disk('public')->exists($paymentMethod->qr_code)
-            ) {
+            if ($paymentMethod->qr_code && Storage::disk('public')->exists($paymentMethod->qr_code)) {
                 Storage::disk('public')->delete($paymentMethod->qr_code);
             }
 
             $file = $request->file('qr_code');
-
             $filename = time().'_'.$file->getClientOriginalName();
-
-            $path = $file->storeAs(
-                'payment-methods',
-                $filename,
-                'public'
-            );
-
+            $path = $file->storeAs('payment-methods', $filename, 'public');
             $data['qr_code'] = $path;
         }
 
-        $paymentMethod->update($data);
+        $updatedPaymentMethod = $this->paymentMethodService->updatePaymentMethod($data, $id);
 
-        return response()->json([
-            'data' => $paymentMethod,
-            'message' => 'បានកែប្រែវិធីបង់ប្រាក់ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($updatedPaymentMethod, 'បានកែប្រែវិធីបង់ប្រាក់ដោយជោគជ័យ');
     }
 
     // DELETE
     public function destroy(string $id)
     {
-        $paymentMethod = PaymentMethod::find($id);
-
-        if (! $paymentMethod) {
-            return response()->json([
-                'message' => 'រកមិនឃើញវិធីបង់ប្រាក់',
-            ], 404);
+        try {
+            $paymentMethod = $this->paymentMethodService->deletePaymentMethod($id);
+            return $this->successResponse($paymentMethod, 'បានលុបវិធីបង់ប្រាក់ដោយជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
         }
-
-        // delete image
-        if (
-            $paymentMethod->qr_code &&
-            Storage::disk('public')->exists($paymentMethod->qr_code)
-        ) {
-            Storage::disk('public')->delete($paymentMethod->qr_code);
-        }
-
-        $paymentMethod->delete();
-
-        return response()->json([
-            'data' => $paymentMethod,
-            'message' => 'បានលុបវិធីបង់ប្រាក់ដោយជោគជ័យ',
-        ]);
     }
 
     // CHANGE STATUS
     public function changeStatus(Request $request, string $id)
     {
-        $paymentMethod = PaymentMethod::find($id);
-
-        if (! $paymentMethod) {
-            return response()->json([
-                'message' => 'រកមិនឃើញវិធីបង់ប្រាក់',
-            ], 404);
-        }
-
-        $paymentMethod->status = $request->input('status');
-        $paymentMethod->save();
-
-        return response()->json([
-            'data' => $paymentMethod,
-            'message' => 'បានប្តូរស្ថានភាពដោយជោគជ័យ',
+        $request->validate([
+            'status' => 'required|in:active,inactive',
         ]);
+
+        $paymentMethod = $this->paymentMethodService->changeStatus($id, $request->input('status'));
+
+        return $this->successResponse($paymentMethod, 'បានប្តូរស្ថានភាពដោយជោគជ័យ');
     }
 
-    // BULK DELETE
     public function bulkDelete(Request $request)
     {
-        $ids = $request->ids;
-
-        $paymentMethods = PaymentMethod::whereIn('id', $ids)->get();
-
-        foreach ($paymentMethods as $item) {
-
-            // delete image
-            if (
-                $item->qr_code &&
-                Storage::disk('public')->exists($item->qr_code)
-            ) {
-                Storage::disk('public')->delete($item->qr_code);
-            }
-
-            $item->delete();
-        }
-
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:payment_methods,id',
         ]);
+
+        $this->paymentMethodService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបជោគជ័យ');
     }
 
-    // DELETE ALL
     public function deleteAll()
     {
-        $paymentMethods = PaymentMethod::all();
+        $this->paymentMethodService->deleteAll();
 
-        foreach ($paymentMethods as $item) {
-
-            // delete image
-            if (
-                $item->qr_code &&
-                Storage::disk('public')->exists($item->qr_code)
-            ) {
-                Storage::disk('public')->delete($item->qr_code);
-            }
-        }
-
-        PaymentMethod::truncate();
-
-        return response()->json([
-            'message' => 'លុបទាំងអស់ជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

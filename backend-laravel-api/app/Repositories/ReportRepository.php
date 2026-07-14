@@ -124,6 +124,18 @@ class ReportRepository
         return true;
     }
 
+    public function deleteAll()
+    {
+        $reports = Report::all();
+        foreach ($reports as $item) {
+            if ($item->file_path && Storage::disk('public')->exists($item->file_path)) {
+                Storage::disk('public')->delete($item->file_path);
+            }
+            $item->delete();
+        }
+        return true;
+    }
+
     /**
      * Helper clean path URL
      */

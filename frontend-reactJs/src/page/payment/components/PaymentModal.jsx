@@ -127,7 +127,7 @@ function PaymentModal ({
       centered
       width={950}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form layout='vertical' form={form} onFinish={onFinish}>
         {/* Hidden ID field for update */}

@@ -47,4 +47,9 @@ class FinancialReportService
     {
         return $this->reportRepository->getStats();
     }
+
+    public function deleteAll()
+    {
+        return $this->reportRepository->deleteAll();
+    }
 }

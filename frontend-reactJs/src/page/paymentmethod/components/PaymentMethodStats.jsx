@@ -25,7 +25,7 @@ function CurrencyStats ({ stats }) {
         <Col xs={24} sm={12} lg={6} key={index}>
           <Card
             className='rounded-2xl border-none shadow-sm overflow-hidden relative hover:shadow-lg transition-all duration-300'
-            bodyStyle={{ padding: 20 }}
+            styles={{ body: { padding: 20 } }}
           >
             <div className='flex justify-between items-start'>
               <div>

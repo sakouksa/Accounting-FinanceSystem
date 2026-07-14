@@ -10,7 +10,7 @@ function CustomEmpty ({
     <div className='py-12 flex justify-center items-center'>
       <Empty
         image={Empty.PRESENTED_IMAGE_SIMPLE}
-        imageStyle={{ height: 60, opacity: 0.8 }}
+        styles={{ image: { height: 60, opacity: 0.8 } }}
         description={
           <Space direction='vertical' size={2} className='mt-2'>
             <h3 className='text-gray-700 text-base font-semibold m-0 leading-tight'>

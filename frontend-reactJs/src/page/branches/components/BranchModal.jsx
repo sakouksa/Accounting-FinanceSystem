@@ -56,7 +56,7 @@ function BranchModal ({ open, setState, onSuccess, editingBranch }) {
       centered
       width={600}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form layout='vertical' form={form} onFinish={onFinish}>
         <Form.Item name='id' hidden>

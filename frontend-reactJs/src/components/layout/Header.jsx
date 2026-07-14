@@ -6,7 +6,9 @@ import {
   SettingOutlined,
   LogoutOutlined,
   UserOutlined,
-  EditOutlined
+  EditOutlined,
+  BulbOutlined,
+  BulbFilled
 } from '@ant-design/icons'
 
 import { profileStore } from '../../store/profileStore'
@@ -16,7 +18,7 @@ import { useLogout } from '../../hooks/useLogout'
 
 const { Header: AntHeader } = Layout
 
-const Header = ({ collapsed, setCollapsed, isDarkMode }) => {
+const Header = ({ collapsed, setCollapsed, isDarkMode, toggleTheme }) => {
   const navigate = useNavigate()
   const { profile } = profileStore()
   const user = profile || {}
@@ -107,8 +109,14 @@ const Header = ({ collapsed, setCollapsed, isDarkMode }) => {
       </div>
 
       <div className='flex items-center gap-3'>
+        <Button
+          type='text'
+          icon={isDarkMode ? <BulbFilled style={{ color: '#f59e0b', fontSize: '18px' }} /> : <BulbOutlined style={{ fontSize: '18px' }} />}
+          onClick={toggleTheme}
+          className={`flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 ${isDarkMode ? 'text-white' : 'text-slate-600'}`}
+        />
         <Dropdown
-          dropdownRender={() => dropdownContent}
+          popupRender={() => dropdownContent}
           placement='bottomRight'
           trigger={['click']}
         >

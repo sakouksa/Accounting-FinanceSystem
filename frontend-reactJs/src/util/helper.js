@@ -28,16 +28,24 @@ export const formatToPicker = (date) => {
  * @returns {boolean} - true មានសិទ្ធិ, false អត់សិទ្ធិ
  */
 export const isPermissionAction = (permission_code) => {
-  // ១. កែឈ្មោះទៅជា permissions (មាន s) ឱ្យត្រូវតាម Zustand Store
   const {
     permissions
   } = profileStore.getState();
 
   if (permissions && permissions.length > 0) {
+    // 1. Clean dot notation to database underscore notation (e.g. branches.create -> branches_create)
+    let cleanCode = permission_code.replace(/\./g, '_').toLowerCase();
+    
+    // 2. Map standard actions
+    cleanCode = cleanCode.replace('_read', '_view');
+    cleanCode = cleanCode.replace('_edit', '_update');
+
     return permissions.some((item) => {
-      // ២. ទាញយក Key ពី DB មកផ្ទៀងផ្ទាត់ (ទោះជា API បោះមកជា key មួយណា ក៏មិនចោទជាបញ្ហា)
-      const dbRoute = item.route_key || item.web_route_key || item.code || item.name || (typeof item === 'string' ? item : '');
-      return dbRoute === permission_code;
+      if (!item) return false;
+      const itemCode = (item.code || '').toLowerCase();
+      const itemRoute = (item.route_key || '').toLowerCase();
+
+      return itemCode === cleanCode || itemCode === permission_code.toLowerCase() || itemRoute === permission_code.toLowerCase();
     });
   }
   return false;

@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\ProfileService;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
@@ -15,10 +16,7 @@ class ProfileController extends Controller
      */
     public function profile()
     {
-        return response()->json([
-            'error' => false,
-            'data'  => auth()->user()
-        ]);
+        return $this->successResponse(auth()->user());
     }
 
     /**
@@ -42,14 +40,11 @@ class ProfileController extends Controller
         // Verify current password before updating
         if ($request->filled('password')) {
             if (!Hash::check($request->current_password, $user->password)) {
-                return response()->json([
-                    'error'   => true,
-                    'message' => 'ពាក្យសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ!'
-                ], 422);
+                return $this->errorResponse('ពាក្យសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ!', 422);
             }
 
             // Hash and save new password
-            $user->password = bcrypt($request->password);
+            $user->password = Hash::make($request->password);
         }
 
         // Update profile fields
@@ -60,7 +55,6 @@ class ProfileController extends Controller
 
         // Replace profile image if uploaded
         if ($request->hasFile('profile_image')) {
-
             // Delete old image
             if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
                 Storage::disk('public')->delete($user->profile_image);
@@ -73,11 +67,86 @@ class ProfileController extends Controller
 
         $user->save();
 
-        return response()->json([
-            'error'   => false,
-            'message' => 'ទិន្នន័យត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ!',
-            'data'    => $user
-        ], 200);
+        return $this->successResponse($user, 'ទិន្នន័យត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ!');
+    }
+
+    /**
+     * Change password
+     */
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'password'         => 'required|min:6|confirmed',
+        ]);
+
+        $user = auth()->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return $this->errorResponse('ពាក្យសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ!', 422);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return $this->successResponse(null, 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ!');
+    }
+
+    /**
+     * Request password reset token
+     */
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email'
+        ]);
+
+        $token = Str::random(60);
+
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $request->email],
+            [
+                'email' => $request->email,
+                'token' => Hash::make($token),
+                'created_at' => now()
+            ]
+        );
+
+        $resetLink = url("/reset-password?token={$token}&email=" . urlencode($request->email));
+        \Log::info("Password reset link for {$request->email}: {$resetLink}");
+
+        return $this->successResponse([
+            'token' => $token,
+            'reset_link' => $resetLink
+        ], 'Password reset link has been logged/sent!');
+    }
+
+    /**
+     * Reset password using token
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token'    => 'required',
+            'email'    => 'required|email|exists:users,email',
+            'password' => 'required|min:6|confirmed',
+        ]);
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$record || !Hash::check($request->token, $record->token)) {
+            return $this->errorResponse('Invalid reset token or email.', 422);
+        }
+
+        $user = User::where('email', $request->email)->firstOrFail();
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return $this->successResponse(null, 'Password has been reset successfully.');
     }
 
     /**
@@ -116,6 +185,7 @@ class ProfileController extends Controller
         // Format audit log data
         $auditLogsData = collect($auditLogsPaginated->items())->map(function ($log) {
             return [
+                'id'     => $log->id,
                 'action' => $log->action_type ?? '—',
                 'target' => $log->table_name ?? '—',
                 'time'   => $log->created_at ?? '',

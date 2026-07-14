@@ -1,10 +1,11 @@
 import './App.css';
 import { BrowserRouter } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntdApp } from 'antd';
 import '@fontsource/kantumruy-pro';
 import '@fontsource/kantumruy-pro/700.css';
 
 import AppRoutes from './routes';
+import { AntdGlobalRegister } from './util/message';
 
 function App() {
   return (
@@ -17,9 +18,12 @@ function App() {
         },
       }}
     >
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <AntdApp>
+        <AntdGlobalRegister />
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AntdApp>
     </ConfigProvider>
   );
 }

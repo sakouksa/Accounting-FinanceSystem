@@ -123,7 +123,7 @@ function CashFlowModal ({
       centered
       width={950} // Optimized layout grid constraint
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form layout='vertical' form={form} onFinish={onFinish} className='mt-4'>
         {/* Hidden ID field for update */}

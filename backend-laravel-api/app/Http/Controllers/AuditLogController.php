@@ -4,9 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AuditLogController extends Controller
+class AuditLogController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:audit_logs.read', only: ['index', 'stats']),
+        ];
+    }
+
     public function index(Request $request)
     {
         $query = AuditLog::with(['user' => function ($q) {
@@ -46,7 +55,7 @@ class AuditLogController extends Controller
             $query->where('user_id', $request->user_id);
         }
 
-        // DATE FILTER (IMPORTANT)
+        // DATE FILTER
         if ($request->filled('start_date')) {
             $query->whereDate('created_at', '>=', $request->start_date);
         }

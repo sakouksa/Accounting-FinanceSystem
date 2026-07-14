@@ -198,7 +198,7 @@ function FinancialReportModal ({
       centered
       width={950}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form layout='vertical' form={form} onFinish={onFinish} className='mt-4'>
         <Form.Item name='id' hidden>

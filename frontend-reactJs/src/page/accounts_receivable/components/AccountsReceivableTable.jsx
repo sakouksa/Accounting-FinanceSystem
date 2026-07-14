@@ -195,7 +195,7 @@ function AccountsReceivableTable ({
                   variant='borderless'
                   style={{ width: 115 }}
                   onChange={newValue => onStatusChange(record.id, newValue)}
-                  dropdownStyle={{ textAlign: 'left' }}
+                  styles={{ popup: { root: { textAlign: 'left' } } }}
                   className={`
                     ${currentStyle.bg}
                     border rounded-full font-medium text-xs text-center

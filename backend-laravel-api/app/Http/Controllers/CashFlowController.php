@@ -7,14 +7,26 @@ use App\Models\ChartOfAccount;
 use App\Models\Transaction;
 use App\Services\CashFlowService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class CashFlowController extends Controller
+class CashFlowController extends Controller implements HasMiddleware
 {
     protected $cashFlowService;
 
     public function __construct(CashFlowService $cashFlowService)
     {
         $this->cashFlowService = $cashFlowService;
+    }
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:cash_flows.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:cash_flows.create', only: ['store']),
+            new Middleware('permission:cash_flows.update', only: ['update']),
+            new Middleware('permission:cash_flows.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
     }
 
     // LIST
@@ -25,19 +37,16 @@ class CashFlowController extends Controller
         $paginator = $this->cashFlowService
             ->getPaginatedList($request->all(), $limit);
 
-        return response()->json([
-            'list' => $paginator->items(),
-            'total' => $paginator->total(),
-            'transactions' => Transaction::select(
-                'id',
-                'transaction_no'
-            )->get(),
-            'chart_of_accounts' => ChartOfAccount::select(
-                'id',
-                'account_name',
-                'account_code'
-            )->get(),
-        ]);
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total(),
+            200,
+            'Success',
+            [
+                'transactions' => Transaction::select('id', 'transaction_no')->get(),
+                'chart_of_accounts' => ChartOfAccount::select('id', 'account_name', 'account_code')->get(),
+            ]
+        );
     }
 
     // STATS
@@ -54,16 +63,14 @@ class CashFlowController extends Controller
         $cashFlow = $this->cashFlowService
             ->createCashFlow($request->validated());
 
-        return response()->json([
-            'data' => $cashFlow,
-            'message' => 'បានបង្កើតទិន្នន័យលំហូរសាច់ប្រាក់ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($cashFlow, 'បានបង្កើតទិន្នន័យលំហូរសាច់ប្រាក់ដោយជោគជ័យ', 201);
     }
 
     // SHOW
     public function show($id)
     {
-        return $this->cashFlowService->findById($id);
+        $cashFlow = $this->cashFlowService->findById($id);
+        return $this->successResponse($cashFlow);
     }
 
     // UPDATE
@@ -72,10 +79,7 @@ class CashFlowController extends Controller
         $cashFlow = $this->cashFlowService
             ->updateCashFlow($request->validated(), $id);
 
-        return response()->json([
-            'data' => $cashFlow,
-            'message' => 'បានកែប្រែទិន្នន័យលំហូរសាច់ប្រាក់ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($cashFlow, 'បានកែប្រែទិន្នន័យលំហូរសាច់ប្រាក់ដោយជោគជ័យ');
     }
 
     // DELETE
@@ -84,28 +88,25 @@ class CashFlowController extends Controller
         try {
             $cashFlow = $this->cashFlowService
                 ->deleteCashFlow($id);
-
-            return response()->json([
-                'data' => $cashFlow,
-                'message' => 'បានលុបទិន្នន័យលំហូរសាច់ប្រាក់ដោយជោគជ័យ',
-            ]);
+            return $this->successResponse($cashFlow, 'បានលុបទិន្នន័យលំហូរសាច់ប្រាក់ដោយជោគជ័យ');
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 400);
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
         }
     }
 
     // BULK DELETE
     public function bulkDelete(Request $request)
     {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:cash_flows,id',
+        ]);
+
         $this->cashFlowService->bulkDelete(
             $request->get('ids', [])
         );
 
-        return response()->json([
-            'message' => 'លុបទិន្នន័យលំហូរសាច់ប្រាក់ដែលជ្រើសរើសជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទិន្នន័យលំហូរសាច់ប្រាក់ដែលជ្រើសរើសជោគជ័យ');
     }
 
     // DELETE ALL
@@ -113,8 +114,6 @@ class CashFlowController extends Controller
     {
         $this->cashFlowService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបទិន្នន័យលំហូរសាច់ប្រាក់ទាំងអស់បានជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទិន្នន័យលំហូរសាច់ប្រាក់ទាំងអស់បានជោគជ័យ');
     }
 }

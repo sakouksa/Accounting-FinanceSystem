@@ -30,7 +30,7 @@ const AddUser = () => {
       try {
         const [rolesRes, permsRes, branchesRes] = await Promise.all([
           request('default-roles', 'GET'),
-          request('permissions', 'GET'),
+          request('users/all-permissions', 'GET'),
           request('branches-list', 'GET')
         ])
 

@@ -3,155 +3,100 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AccountTypeRequest;
-use App\Models\AccountType;
+use App\Services\AccountTypeService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AccountTypeController extends Controller
+class AccountTypeController extends Controller implements HasMiddleware
 {
+    protected $accountTypeService;
+
+    public function __construct(AccountTypeService $accountTypeService)
+    {
+        $this->accountTypeService = $accountTypeService;
+    }
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:account_types.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:account_types.create', only: ['store']),
+            new Middleware('permission:account_types.update', only: ['update']),
+            new Middleware('permission:account_types.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
+
     // LIST
     public function index(Request $request)
     {
-        $query = AccountType::query();
+        $paginator = $this->accountTypeService->getAll($request);
 
-        if ($request->has('id')) {
-            $query->where('id', $request->input('id'));
-        }
-
-        if ($request->has('txt_search')) {
-            $search = $request->input('txt_search');
-
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%$search%")
-                    ->orWhere('code', 'LIKE', "%$search%")
-                    ->orWhere('description', 'LIKE', "%$search%");
-            });
-        }
-
-        $limit = $request->get('limit', 10);
-
-        $paginator = $query->orderBy('id', 'desc')->paginate($limit);
-
-        return response()->json([
-            'list' => $paginator->items(),
-            'total' => $paginator->total(),
-        ]);
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total()
+        );
     }
 
     // STATS
     public function stats()
     {
+        $stats = $this->accountTypeService->getStats();
         return response()->json([
-            'stats' => [
-                [
-                    'title' => 'ប្រភេទគណនីសរុប',
-                    'value' => AccountType::count(),
-                    'color' => '#6366f1',
-                    'icon' => 'BankOutlined',
-                ],
-                [
-                    'title' => 'Debit',
-                    'value' => AccountType::where('normal_balance', 'debit')->count(),
-                    'color' => '#10b981',
-                    'icon' => 'ArrowDownOutlined',
-                ],
-                [
-                    'title' => 'Credit',
-                    'value' => AccountType::where('normal_balance', 'credit')->count(),
-                    'color' => '#f59e0b',
-                    'icon' => 'ArrowUpOutlined',
-                ],
-                [
-                    'title' => 'Today',
-                    'value' => AccountType::whereDate('created_at', today())->count(),
-                    'color' => '#ef4444',
-                    'icon' => 'CalendarOutlined',
-                ],
-            ],
+            'stats' => $stats
         ]);
     }
 
-    // STORE (USING REQUEST)
+    // STORE
     public function store(AccountTypeRequest $request)
     {
-        $accountType = AccountType::create($request->validated());
+        $accountType = $this->accountTypeService->createAccountType($request->validated());
 
-        return response()->json([
-            'data' => $accountType,
-            'message' => 'បានបង្កើត Account Type ជោគជ័យ',
-        ], 201);
+        return $this->successResponse($accountType, 'បានបង្កើត Account Type ជោគជ័យ', 201);
     }
 
     // SHOW
     public function show(string $id)
     {
-        $accountType = AccountType::find($id);
-
-        if (! $accountType) {
-            return response()->json([
-                'message' => 'រកមិនឃើញ Account Type',
-            ], 404);
-        }
-
-        return response()->json([
-            'data' => $accountType,
-        ]);
+        $accountType = $this->accountTypeService->findById($id);
+        return $this->successResponse($accountType);
     }
 
-    // UPDATE (USING REQUEST)
+    // UPDATE
     public function update(AccountTypeRequest $request, string $id)
     {
-        $accountType = AccountType::find($id);
+        $accountType = $this->accountTypeService->updateAccountType($request->validated(), $id);
 
-        if (! $accountType) {
-            return response()->json([
-                'message' => 'រកមិនឃើញ Account Type',
-            ], 404);
-        }
-
-        $accountType->update($request->validated());
-
-        return response()->json([
-            'data' => $accountType,
-            'message' => 'បានកែប្រែ Account Type ជោគជ័យ',
-        ]);
+        return $this->successResponse($accountType, 'បានកែប្រែ Account Type ជោគជ័យ');
     }
 
     // DELETE
     public function destroy(string $id)
     {
-        $accountType = AccountType::find($id);
-
-        if (! $accountType) {
-            return response()->json([
-                'message' => 'រកមិនឃើញ Account Type',
-            ], 404);
+        try {
+            $accountType = $this->accountTypeService->deleteAccountType($id);
+            return $this->successResponse($accountType, 'បានលុបជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
         }
-
-        $accountType->delete();
-
-        return response()->json([
-            'data' => $accountType,
-            'message' => 'បានលុបជោគជ័យ',
-        ]);
     }
 
-    // BULK DELETE
     public function bulkDelete(Request $request)
     {
-        AccountType::whereIn('id', $request->ids ?? [])->delete();
-
-        return response()->json([
-            'message' => 'លុបជាច្រើនជោគជ័យ',
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:account_types,id',
         ]);
+
+        $this->accountTypeService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបជាច្រើនជោគជ័យ');
     }
 
-    // DELETE ALL
     public function deleteAll()
     {
-        AccountType::query()->delete();
+        $this->accountTypeService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបទាំងអស់ជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

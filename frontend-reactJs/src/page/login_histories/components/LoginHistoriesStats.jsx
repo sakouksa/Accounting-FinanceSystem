@@ -22,9 +22,9 @@ function LoginHistoriesStats({ stats = [] }) {
       {stats.map((item, index) => (
         <Col xs={24} sm={12} lg={8} key={index}>
           <Card
-            bordered={false}
+            variant='borderless'
             className='rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden relative'
-            bodyStyle={{ padding: 20 }}
+            styles={{ body: { padding: 20 } }}
           >
             <div className='flex items-start justify-between'>
               <div>

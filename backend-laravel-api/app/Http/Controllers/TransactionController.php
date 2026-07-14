@@ -3,119 +3,54 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TransactionRequest;
-use App\Models\Branch;
-use App\Models\Transaction;
-use App\Models\TransactionType;
+use App\Services\TransactionService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class TransactionController extends Controller
+class TransactionController extends Controller implements HasMiddleware
 {
+    protected $transactionService;
+
+    public function __construct(TransactionService $transactionService)
+    {
+        $this->transactionService = $transactionService;
+    }
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:transactions.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:transactions.create', only: ['store']),
+            new Middleware('permission:transactions.update', only: ['update']),
+            new Middleware('permission:transactions.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
+
     public function index(Request $request)
     {
         try {
+            $paginator = $this->transactionService->getAll($request);
 
-            $query = Transaction::query();
-
-            if ($request->filled('txt_search')) {
-
-                $search = trim($request->txt_search);
-
-                $query->where(function ($q) use ($search) {
-
-                    $q->where('transaction_no', 'LIKE', "%{$search}%")
-                        ->orWhere('description', 'LIKE', "%{$search}%")
-                        ->orWhereHas('transactionType', function ($qq) use ($search) {
-
-                            $qq->where('name', 'LIKE', "%{$search}%")
-                                ->orWhere('code', 'LIKE', "%{$search}%");
-                        });
-                });
-            }
-
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
-
-            if ($request->filled('branch_id')) {
-                $query->where('branch_id', $request->branch_id);
-            }
-
-            if ($request->filled('currency_code')) {
-                $query->where('currency_code', $request->currency_code);
-            }
-
-            if ($request->filled('transaction_type_id')) {
-                $query->where('transaction_type_id', $request->transaction_type_id);
-            }
-
-            $perPage = $request->get('limit', 20);
-
-            $list = $query->with([
-                'branch',
-                'details',
-                'transactionType',
-            ])
-                ->orderBy('id', 'desc')
-                ->paginate($perPage);
-
-            return response()->json([
-                'list' => $list->items(),
-                'total' => $list->total(),
-                'branches' => Branch::select(
-                    'id',
-                    'name'
-                )->get(),
-
-                'transaction_types' => TransactionType::select(
-                    'id',
-                    'name',
-                    'code'
-                )->get(),
-            ]);
+            return $this->paginatedResponse(
+                $paginator->items(),
+                $paginator->total(),
+                200,
+                'Success',
+                [
+                    'branches' => $this->transactionService->getBranchesLookup(),
+                    'transaction_types' => $this->transactionService->getTransactionTypesLookup(),
+                ]
+            );
         } catch (\Exception $e) {
-
             \Log::error('Transaction Error: '.$e->getMessage());
-
-            return response()->json([
-                'errors' => true,
-                'message' => 'ទាញទិន្នន័យបរាជ័យ: '.$e->getMessage(),
-            ], 500);
+            return $this->errorResponse('ទាញទិន្នន័យបរាជ័យ: '.$e->getMessage(), 500);
         }
     }
 
     public function stats()
     {
-        $stats = [
-
-            [
-                'title' => 'ប្រតិបត្តិការសរុប',
-                'value' => Transaction::count(),
-                'color' => '#6366f1',
-                'icon' => 'DatabaseOutlined',
-            ],
-
-            [
-                'title' => 'រង់ចាំ',
-                'value' => Transaction::where('status', 'Pending')->count(),
-                'color' => '#f59e0b',
-                'icon' => 'ClockCircleOutlined',
-            ],
-
-            [
-                'title' => 'អនុម័ត',
-                'value' => Transaction::where('status', 'Approved')->count(),
-                'color' => '#10b981',
-                'icon' => 'CheckCircleOutlined',
-            ],
-
-            [
-                'title' => 'បង្កើតថ្ងៃនេះ',
-                'value' => Transaction::whereDate('created_at', today())->count(),
-                'color' => '#3b82f6',
-                'icon' => 'CalendarOutlined',
-            ],
-        ];
-
+        $stats = $this->transactionService->getStats();
         return response()->json([
             'stats' => $stats,
         ]);
@@ -124,117 +59,70 @@ class TransactionController extends Controller
     public function store(TransactionRequest $request)
     {
         try {
+            $transaction = $this->transactionService->createTransaction($request->validated());
 
-            $transaction = Transaction::create($request->validated());
-
-            return response()->json([
-
-                'data' => $transaction->load([
-                    'branch',
-                    'details',
-                    'transactionType',
-                ]),
-
-                'message' => 'បានបង្កើតប្រតិបត្តិការជោគជ័យ',
-            ]);
+            return $this->successResponse(
+                $transaction->load(['branch', 'details', 'transactionType']),
+                'បានបង្កើតប្រតិបត្តិការជោគជ័យ',
+                201
+            );
         } catch (\Exception $e) {
-
             \Log::error('Create Transaction Error: '.$e->getMessage());
-
-            return response()->json([
-                'errors' => true,
-                'message' => 'បង្កើតមិនបានជោគជ័យ: '.$e->getMessage(),
-            ], 500);
+            return $this->errorResponse('បង្កើតមិនបានជោគជ័យ: '.$e->getMessage(), 500);
         }
     }
 
     public function show(string $id)
     {
         try {
-
-            $transaction = Transaction::with([
-                'branch',
-                'details',
-                'transactionType',
-            ])->findOrFail($id);
-
-            return response()->json([
-                'data' => $transaction,
-            ]);
+            $transaction = $this->transactionService->findById($id);
+            return $this->successResponse($transaction);
         } catch (\Exception $e) {
-
-            return response()->json([
-                'errors' => true,
-                'message' => 'រកមិនឃើញទិន្នន័យ',
-            ], 404);
+            return $this->errorResponse('រកមិនឃើញទិន្នន័យ', 404);
         }
     }
 
     public function update(TransactionRequest $request, string $id)
     {
         try {
+            $transaction = $this->transactionService->updateTransaction($request->validated(), $id);
 
-            $transaction = Transaction::findOrFail($id);
-
-            $transaction->update($request->validated());
-
-            return response()->json([
-
-                'data' => $transaction->load([
-                    'branch',
-                    'details',
-                    'transactionType',
-                ]),
-
-                'message' => 'បានកែប្រែប្រតិបត្តិការជោគជ័យ',
-            ]);
+            return $this->successResponse(
+                $transaction->load(['branch', 'details', 'transactionType']),
+                'បានកែប្រែប្រតិបត្តិការជោគជ័យ'
+            );
         } catch (\Exception $e) {
-
             \Log::error('Update Transaction Error: '.$e->getMessage());
-
-            return response()->json([
-                'errors' => true,
-                'message' => 'កែប្រែមិនបានជោគជ័យ: '.$e->getMessage(),
-            ], 500);
+            return $this->errorResponse('កែប្រែមិនបានជោគជ័យ: '.$e->getMessage(), 500);
         }
     }
 
     public function destroy(string $id)
     {
-        $transaction = Transaction::find($id);
-
-        if (! $transaction) {
-
-            return response()->json([
-                'error' => true,
-                'message' => 'រកមិនឃើញប្រតិបត្តិការ',
-            ]);
+        try {
+            $transaction = $this->transactionService->deleteTransaction($id);
+            return $this->successResponse($transaction, 'លុបជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('រកមិនឃើញប្រតិបត្តិការ', 404);
         }
-
-        $transaction->delete();
-
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
-        ]);
     }
 
     public function bulkDelete(Request $request)
     {
-        $ids = $request->ids ?? [];
-
-        Transaction::whereIn('id', $ids)->delete();
-
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:transactions,id',
         ]);
+
+        $this->transactionService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបជោគជ័យ');
     }
 
     public function deleteAll()
     {
-        Transaction::query()->delete();
+        $this->transactionService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបទាំងអស់ជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

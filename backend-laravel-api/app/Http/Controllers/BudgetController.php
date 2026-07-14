@@ -7,14 +7,26 @@ use App\Models\Branch;
 use App\Models\ChartOfAccount;
 use App\Services\BudgetService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class BudgetController extends Controller
+class BudgetController extends Controller implements HasMiddleware
 {
     protected $budgetService;
 
     public function __construct(BudgetService $budgetService)
     {
         $this->budgetService = $budgetService;
+    }
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:budgets.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:budgets.create', only: ['store']),
+            new Middleware('permission:budgets.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:budgets.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
     }
 
     // LIST

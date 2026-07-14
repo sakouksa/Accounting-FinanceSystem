@@ -77,7 +77,7 @@ function TransactionTypeModal ({
       centered
       width={700}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form layout='vertical' form={form} onFinish={onFinish}>
         <Row gutter={16}>

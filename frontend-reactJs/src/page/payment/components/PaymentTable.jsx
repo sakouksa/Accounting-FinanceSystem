@@ -303,7 +303,7 @@ function PaymentTable ({
                   variant='borderless'
                   style={{ width: 120 }}
                   onChange={newValue => onStatusChange(record.id, newValue)}
-                  dropdownStyle={{ textAlign: 'left' }}
+                  styles={{ popup: { root: { textAlign: 'left' } } }}
                   className={`
             ${currentStyle.bg}
             border rounded-full font-medium text-xs

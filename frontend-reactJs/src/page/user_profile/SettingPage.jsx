@@ -293,7 +293,7 @@ const UserProfileSetting = () => {
             <Col xs={24} md={16}>
               <Card
                 className='w-full shadow-sm rounded-lg border-none'
-                bodyStyle={{ padding: '24px' }}
+                styles={{ body: { padding: '24px' } }}
               >
                 <Tabs
                   activeKey={activeTab}

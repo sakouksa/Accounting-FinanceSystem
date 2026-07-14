@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SupplierRequest;
-use App\Models\Supplier;
 use App\Services\SupplierService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class SupplierController extends Controller
+class SupplierController extends Controller implements HasMiddleware
 {
     protected $supplierService;
 
@@ -16,106 +17,100 @@ class SupplierController extends Controller
         $this->supplierService = $supplierService;
     }
 
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:suppliers.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:suppliers.create', only: ['store']),
+            new Middleware('permission:suppliers.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:suppliers.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
+
     // LIST
     public function index(Request $request)
     {
-        $query = Supplier::query();
+        $paginator = $this->supplierService->getAll($request);
 
-        if ($request->filled('txt_search')) {
-            $search = $request->txt_search;
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total()
+        );
+    }
 
-            $query->where(function ($q) use ($search) {
-                $q->where('supplier_code', 'LIKE', "%{$search}%")
-                    ->orWhere('supplier_name', 'LIKE', "%{$search}%")
-                    ->orWhere('phone', 'LIKE', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $limit = $request->get('limit', 10);
-
-        $paginator = $query->latest()->paginate($limit);
-
+    // STATS
+    public function stats()
+    {
+        $stats = $this->supplierService->getStats();
         return response()->json([
-            'list' => $paginator->items(),
-            'total' => $paginator->total(),
+            'stats' => $stats,
         ]);
     }
 
     // STORE
     public function store(SupplierRequest $request)
     {
-        $supplier = $this->supplierService
-            ->createSupplier($request->validated());
+        $supplier = $this->supplierService->createSupplier($request->validated());
 
-        return response()->json([
-            'data' => $supplier,
-            'message' => 'បានបង្កើត Supplier ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($supplier, 'បានបង្កើត Supplier ដោយជោគជ័យ', 201);
     }
 
     // SHOW
     public function show($id)
     {
-        return Supplier::findOrFail($id);
+        $supplier = $this->supplierService->findById($id);
+        return $this->successResponse($supplier);
     }
 
     // UPDATE
     public function update(SupplierRequest $request, $id)
     {
-        $supplier = $this->supplierService
-            ->updateSupplier($request->validated(), $id);
+        $supplier = $this->supplierService->updateSupplier($request->validated(), $id);
 
-        return response()->json([
-            'data' => $supplier,
-            'message' => 'បានកែប្រែ Supplier ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($supplier, 'បានកែប្រែ Supplier ដោយជោគជ័យ');
     }
 
     // DELETE
     public function destroy($id)
     {
-        $supplier = $this->supplierService
-            ->deleteSupplier($id);
-
-        return response()->json([
-            'data' => $supplier,
-            'message' => 'បានលុប Supplier ដោយជោគជ័យ',
-        ]);
+        try {
+            $supplier = $this->supplierService->deleteSupplier($id);
+            return $this->successResponse($supplier, 'បានលុប Supplier ដោយជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
+        }
     }
 
     // CHANGE STATUS
     public function changeStatus(Request $request, $id)
     {
-        $supplier = $this->supplierService
-            ->changeStatus($id, $request->status);
-
-        return response()->json([
-            'data' => $supplier,
-            'message' => 'បានប្តូរស្ថានភាពដោយជោគជ័យ',
+        $request->validate([
+            'status' => 'required|in:active,inactive',
         ]);
+
+        $supplier = $this->supplierService->changeStatus($id, $request->status);
+
+        return $this->successResponse($supplier, 'បានប្តូរស្ថានភាពដោយជោគជ័យ');
     }
 
     // BULK DELETE
     public function bulkDelete(Request $request)
     {
-        Supplier::whereIn('id', $request->ids)->delete();
-
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:suppliers,id',
         ]);
+
+        $this->supplierService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបជោគជ័យ');
     }
 
     // DELETE ALL
     public function deleteAll()
     {
-        Supplier::query()->delete();
+        $this->supplierService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបទាំងអស់ជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

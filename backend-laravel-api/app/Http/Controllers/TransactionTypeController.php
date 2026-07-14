@@ -3,140 +3,119 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TransactionTypeRequest;
-use App\Models\TransactionType;
+use App\Services\TransactionTypeService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class TransactionTypeController extends Controller
+class TransactionTypeController extends Controller implements HasMiddleware
 {
+    protected $typeService;
+
+    public function __construct(TransactionTypeService $typeService)
+    {
+        $this->typeService = $typeService;
+    }
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:transaction_types.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:transaction_types.create', only: ['store']),
+            new Middleware('permission:transaction_types.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:transaction_types.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
+
     public function index(Request $request)
     {
         try {
-            $query = TransactionType::query();
-            if ($request->filled('txt_search')) {
-                $search = trim($request->txt_search);
-                $query->where('code', 'LIKE', "%{$search}%")->orWhere('name', 'LIKE', "%{$search}%");
-            }
-            if ($request->filled('is_active')) {
-                $query->where('is_active', $request->is_active);
-            }
-            $list = $query->orderBy('id', 'desc')->paginate($request->get('limit', 20));
+            $paginator = $this->typeService->getAll($request);
 
-            return response()->json(['list' => $list->items(), 'total' => $list->total()]);
+            return $this->paginatedResponse(
+                $paginator->items(),
+                $paginator->total()
+            );
         } catch (\Exception $e) {
-            return response()->json(['errors' => true, 'message' => $e->getMessage()], 500);
+            return $this->errorResponse($e->getMessage(), 500);
         }
     }
 
     public function stats()
     {
-        $stats = [
-            [
-                'title' => 'សរុប',
-                'value' => TransactionType::count(),
-                'color' => '#6366f1',
-                'icon' => 'DatabaseOutlined',
-            ],
-            [
-                'title' => 'សកម្ម',
-                'value' => TransactionType::where('is_active', 1)->count(),
-                'color' => '#10b981',
-                'icon' => 'CheckCircleOutlined',
-            ],
-            [
-                'title' => 'មិនសកម្ម',
-                'value' => TransactionType::where('is_active', 0)->count(),
-                'color' => '#ef4444',
-                'icon' => 'CloseCircleOutlined',
-            ],
-            [
-                'title' => 'បង្កើតថ្មីថ្ងៃនេះ',
-                'value' => TransactionType::whereDate('created_at', today())->count(),
-                'color' => '#3b82f6',
-                'icon' => 'CalendarOutlined',
-            ],
-        ];
-
+        $stats = $this->typeService->getStats();
         return response()->json(['stats' => $stats]);
     }
 
     public function store(TransactionTypeRequest $request)
     {
         try {
-            $data = TransactionType::create($request->validated());
+            $data = $this->typeService->createTransactionType($request->validated());
 
-            return response()->json(['data' => $data, 'message' => 'បានបង្កើតជោគជ័យ']);
+            return $this->successResponse($data, 'បានបង្កើតជោគជ័យ', 201);
         } catch (\Exception $e) {
-            return response()->json(['errors' => true, 'message' => $e->getMessage()], 500);
+            return $this->errorResponse($e->getMessage(), 500);
         }
     }
 
     public function show(string $id)
     {
         try {
-            $data = TransactionType::findOrFail($id);
-
-            return response()->json(['data' => $data]);
+            $data = $this->typeService->findById($id);
+            return $this->successResponse($data);
         } catch (\Exception $e) {
-            return response()->json(['errors' => true, 'message' => 'រកមិនឃើញទិន្នន័យ'], 404);
+            return $this->errorResponse('រកមិនឃើញទិន្នន័យ', 404);
         }
     }
 
     public function update(TransactionTypeRequest $request, string $id)
     {
         try {
-            $data = TransactionType::findOrFail($id);
-            $data->update($request->validated());
+            $data = $this->typeService->updateTransactionType($request->validated(), $id);
 
-            return response()->json([
-                'data' => $data,
-                'message' => 'បានកែប្រែជោគជ័យ',
-            ]);
+            return $this->successResponse($data, 'បានកែប្រែជោគជ័យ');
         } catch (\Exception $e) {
-            return response()->json(['errors' => true, 'message' => $e->getMessage()], 500);
+            return $this->errorResponse($e->getMessage(), 500);
         }
     }
 
     public function destroy(string $id)
     {
-        $data = TransactionType::find($id);
-        if (! $data) {
-            return response()->json(['errors' => true, 'message' => 'រកមិនឃើញទិន្នន័យ']);
+        try {
+            $data = $this->typeService->deleteTransactionType($id);
+            return $this->successResponse($data, 'លុបជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('រកមិនឃើញទិន្នន័យ', 404);
         }
-        $data->delete();
-
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
-        ]);
     }
 
     public function changeStatus(Request $request, $id)
     {
-        $data = TransactionType::find($id);
-        if (! $data) {
-            return response()->json(['errors' => true, 'message' => 'រកមិនឃើញទិន្នន័យ']);
-        }
-        $data->is_active = $request->is_active;
-        $data->save();
+        $request->validate([
+            'is_active' => 'required|boolean',
+        ]);
 
-        return response()->json(['message' => 'ប្តូរស្ថានភាពជោគជ័យ']);
+        $data = $this->typeService->changeStatus($id, $request->is_active);
+
+        return $this->successResponse($data, 'ប្តូរស្ថានភាពជោគជ័យ');
     }
 
     public function bulkDelete(Request $request)
     {
-        $ids = $request->ids ?? [];
-        TransactionType::whereIn('id', $ids)->delete();
-
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:transaction_types,id',
         ]);
+
+        $this->typeService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបជោគជ័យ');
     }
 
     public function deleteAll()
     {
-        TransactionType::query()->delete();
+        $this->typeService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបទាំងអស់ជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountsPayableController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\AccountsReceivableController;
 use App\Http\Controllers\AccountTypeController;
 use App\Http\Controllers\HomeController;
@@ -23,6 +24,8 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionDetailController;
 use App\Http\Controllers\TransactionTypeController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\RolePermissionController;
 use Illuminate\Support\Facades\Route;
 
 // auth
@@ -39,9 +42,17 @@ Route::middleware('auth:api')->group(function () {
     // end profile
     // roles
     Route::get('roles/stats', [RoleController::class, 'stats']);
-    Route::get('permissions', [RoleController::class, 'getAllPermissionsList']); // បន្ថែម Route នេះ
+    Route::get('permissions/all', [RoleController::class, 'getAllPermissionsList']); // Legacy flat list
     Route::apiResource('roles', RoleController::class);
     // end roles
+    // permissions CRUD
+    Route::apiResource('permissions', PermissionController::class);
+    // end permissions
+    // role-permissions
+    Route::get('role-permissions', [RolePermissionController::class, 'index']);
+    Route::get('role-permissions/{roleId}', [RolePermissionController::class, 'getRolePermissions']);
+    Route::post('role-permissions/{roleId}/sync', [RolePermissionController::class, 'syncPermissions']);
+    // end role-permissions
     // branches
     Route::get('/branches/stats', [BranchController::class, 'stats']);
     Route::patch('/branches/{id}/status', [BranchController::class, 'changeStatus']);
@@ -143,6 +154,13 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/cashflow/bulk-delete', [CashFlowController::class, 'bulkDelete']);
     Route::post('/cashflow/delete-all', [CashFlowController::class, 'deleteAll']);
     // end CashFlow
+    // Budget
+    Route::get('/budgets/stats', [BudgetController::class, 'stats']);
+    Route::patch('/budgets/{id}/status', [BudgetController::class, 'changeStatus']);
+    Route::apiResource('budgets', BudgetController::class);
+    Route::post('/budgets/bulk-delete', [BudgetController::class, 'bulkDelete']);
+    Route::post('/budgets/delete-all', [BudgetController::class, 'deleteAll']);
+    // end Budget
     // Financial Report
     Route::get('financial-reports/stats', [FinancialReportController::class, 'getStats']);
     Route::get('/financial-reports/preview', [FinancialReportController::class, 'preview']);
@@ -166,11 +184,17 @@ Route::middleware('auth:api')->group(function () {
     // home
     Route::get('/dashboard', [HomeController::class, 'dashboard']);
     //end home
-    // Permission Routes
-    Route::get('/default-roles', [UserController::class, 'getDefaultRoles']);
-    Route::get('/permissions', [UserController::class, 'getAllPermissions']);
+    // User Routes
+    Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{user}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::post('/users/{id}/restore', [UserController::class, 'restore']);
+    Route::delete('/users/{id}/force', [UserController::class, 'forceDelete']);
+    Route::patch('/users/{id}/status', [UserController::class, 'changeStatus']);
+    Route::put('/users/{id}/change-password', [UserController::class, 'changePassword']);
+    Route::get('/default-roles', [UserController::class, 'getDefaultRoles']);
+    Route::get('/users/all-permissions', [UserController::class, 'getAllPermissions']);
     Route::get('/branches-list', [UserController::class, 'getBranches']);
     //  logout
     Route::post('logout', [AuthController::class, 'logout']);

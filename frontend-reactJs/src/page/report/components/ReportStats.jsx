@@ -45,7 +45,7 @@ function ReportStats ({ stats }) {
         return (
           <Col xs={24} sm={12} lg={6} key={index}>
             <Card
-              bordered={false}
+              variant='borderless'
               className='rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden relative border border-gray-100/60 bg-white'
               styles={{ body: { padding: '24px' } }}
             >

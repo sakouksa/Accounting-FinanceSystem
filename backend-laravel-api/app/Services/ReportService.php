@@ -47,4 +47,9 @@ class ReportService
     {
         return $this->reportRepository->bulkDelete($ids);
     }
+
+    public function deleteAll()
+    {
+        return $this->reportRepository->deleteAll();
+    }
 }

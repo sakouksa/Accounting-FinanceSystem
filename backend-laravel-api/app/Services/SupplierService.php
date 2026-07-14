@@ -13,6 +13,21 @@ class SupplierService
         $this->supplierRepository = $supplierRepository;
     }
 
+    public function getAll($request)
+    {
+        return $this->supplierRepository->getAll($request);
+    }
+
+    public function getStats()
+    {
+        return $this->supplierRepository->getStats();
+    }
+
+    public function findById($id)
+    {
+        return $this->supplierRepository->findById($id);
+    }
+
     public function createSupplier(array $data)
     {
         return $this->supplierRepository->createSupplier($data);
@@ -31,5 +46,15 @@ class SupplierService
     public function changeStatus($id, $status)
     {
         return $this->supplierRepository->changeStatus($id, $status);
+    }
+
+    public function bulkDelete(array $ids)
+    {
+        return $this->supplierRepository->bulkDelete($ids);
+    }
+
+    public function deleteAll()
+    {
+        return $this->supplierRepository->deleteAll();
     }
 }

@@ -3,63 +3,45 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CurrencyRequest;
-use App\Models\Currency;
+use App\Services\CurrencyService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class CurrencyController extends Controller
+class CurrencyController extends Controller implements HasMiddleware
 {
-    // LIST
-    public function index(Request $req)
+    protected $currencyService;
+
+    public function __construct(CurrencyService $currencyService)
     {
-        $query = Currency::query();
+        $this->currencyService = $currencyService;
+    }
 
-        if ($req->has("txt_search")) {
-            $query->where("name", "LIKE", "%" . $req->input("txt_search") . "%")
-                ->orWhere("code", "LIKE", "%" . $req->input("txt_search") . "%");
-        }
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:currencies.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:currencies.create', only: ['store']),
+            new Middleware('permission:currencies.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:currencies.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
 
-        if ($req->has("status")) {
-            $query->where("status", $req->input("status"));
-        }
+    // LIST
+    public function index(Request $request)
+    {
+        $paginator = $this->currencyService->getAll($request);
 
-        $list = $query->orderBy('id', 'desc')->get();
-
-        return response()->json([
-            'list' => $list,
-            'total' => $list->count(),
-        ]);
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total()
+        );
     }
 
     // STATS
     public function stats()
     {
-        $stats = [
-            [
-                "title" => "រូបិយប័ណ្ណសរុប",
-                "value" => Currency::count(),
-                "color" => "#6366f1",
-                "icon" => "DollarOutlined"
-            ],
-            [
-                "title" => "សកម្ម",
-                "value" => Currency::where('status', 'active')->count(),
-                "color" => "#10b981",
-                "icon" => "CheckCircleOutlined"
-            ],
-            [
-                "title" => "អសកម្ម",
-                "value" => Currency::where('status', 'inactive')->count(),
-                "color" => "#ef4444",
-                "icon" => "CloseCircleOutlined"
-            ],
-            [
-                "title" => "បង្កើតថ្ងៃនេះ",
-                "value" => Currency::whereDate('created_at', today())->count(),
-                "color" => "#f59e0b",
-                "icon" => "CalendarOutlined"
-            ]
-        ];
-
+        $stats = $this->currencyService->getStats();
         return response()->json([
             'stats' => $stats
         ]);
@@ -68,92 +50,65 @@ class CurrencyController extends Controller
     // STORE
     public function store(CurrencyRequest $request)
     {
-        $currency = Currency::create($request->validated());
+        $currency = $this->currencyService->createCurrency($request->validated());
 
-        return response()->json([
-            'data' => $currency,
-            'message' => 'បានបង្កើតរូបិយប័ណ្ណដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($currency, 'បានបង្កើតរូបិយប័ណ្ណដោយជោគជ័យ', 201);
     }
 
     // SHOW
     public function show(string $id)
     {
-        return Currency::find($id);
+        $currency = $this->currencyService->findById($id);
+        return $this->successResponse($currency);
     }
 
     // UPDATE
     public function update(CurrencyRequest $request, string $id)
     {
-        $currency = Currency::findOrFail($id);
-        $currency->update($request->validated());
+        $currency = $this->currencyService->updateCurrency($request->validated(), $id);
 
-        return response()->json([
-            'data' => $currency,
-            'message' => 'បានកែប្រែរូបិយប័ណ្ណដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($currency, 'បានកែប្រែរូបិយប័ណ្ណដោយជោគជ័យ');
     }
 
     // DELETE
     public function destroy(string $id)
     {
-        $currency = Currency::find($id);
-
-        if (!$currency) {
-            return [
-                'error' => true,
-                'message' => 'រកមិនឃើញរូបិយប័ណ្ណ',
-            ];
+        try {
+            $currency = $this->currencyService->deleteCurrency($id);
+            return $this->successResponse($currency, 'បានលុបរូបិយប័ណ្ណដោយជោគជ័យ');
+        } catch (\Exception $e) {
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
         }
-
-        $currency->delete();
-
-        return [
-            'data' => $currency,
-            'message' => 'បានលុបរូបិយប័ណ្ណដោយជោគជ័យ',
-        ];
     }
 
     // CHANGE STATUS
     public function changeStatus(Request $request, $id)
     {
-        $currency = Currency::find($id);
+        $request->validate([
+            'status' => 'required|in:active,inactive',
+        ]);
 
-        if (!$currency) {
-            return [
-                'error' => true,
-                'message' => 'រកមិនឃើញរូបិយប័ណ្ណ',
-            ];
-        }
+        $currency = $this->currencyService->changeStatus($id, $request->input('status'));
 
-        $currency->status = $request->input('status');
-        $currency->save();
-
-        return [
-            'data' => $currency,
-            'message' => 'បានប្តូរស្ថានភាពដោយជោគជ័យ',
-        ];
+        return $this->successResponse($currency, 'បានប្តូរស្ថានភាពដោយជោគជ័យ');
     }
 
-    // BULK DELETE
     public function bulkDelete(Request $request)
     {
-        $ids = $request->ids;
-
-        Currency::whereIn('id', $ids)->delete();
-
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:currencies,id',
         ]);
+
+        $this->currencyService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបជោគជ័យ');
     }
 
-    // DELETE ALL
     public function deleteAll()
     {
-        Currency::query()->delete(); // safer than truncate
+        $this->currencyService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបទាំងអស់ជោគជ័យ'
-        ]);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 }

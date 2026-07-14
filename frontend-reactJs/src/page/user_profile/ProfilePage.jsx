@@ -33,7 +33,7 @@ import config from '../../util/config'
 const { Text } = Typography
 
 const ProfileAccountingPage = () => {
-  const { profile, setProfile } = profileStore()
+  const { profile, permissions, setProfile } = profileStore()
 
   const [loading, setLoading] = useState(false)
 
@@ -62,40 +62,32 @@ const ProfileAccountingPage = () => {
 
   const fetchDashboardStats = async (page = 1) => {
     setLoading(true)
+    try {
+      const res = await request(
+        `profile/dashboard-stats?page=${page}&per_page=${pagination.pageSize}`,
+        'GET'
+      )
 
-    // Request dashboard data with pagination
-    const res = await request(
-      `profile/dashboard-stats?page=${page}&per_page=${pagination.pageSize}`,
-      'GET'
-    )
+      if (res && !res.error) {
+        // Update store (user info only, preserving core routing permissions)
+        setProfile(res.user)
 
-    setLoading(false)
-
-    if (res && !res.error) {
-      if (res.user) {
-        setProfile(res.user, res.permissions || []);
+        setDashboardData({
+          income: res.income || '$0.00',
+          expense: res.expense || '$0.00',
+          balance: res.balance || '$0.00',
+          transactions: res.transactions || '0',
+          auditLogs: res.audit_logs || [],
+          opexPercent: res.opex_percent || 0,
+          salaryPercent: res.salary_percent || 0,
+          permissions: res.permissions || []
+        })
       }
-      setDashboardData({
-        income: res.income || '$0.00',
-        expense: res.expense || '$0.00',
-        balance: res.balance || '$0.00',
-        transactions: res.transactions || '0',
-        auditLogs: res.audit_logs || [],
-        opexPercent: res.opex_percent || 0,
-        salaryPercent: res.salary_percent || 0,
-        permissions: res.permissions || ['កត់ត្រាទិន្នន័យ', 'មើលរបាយការណ៍']
-      })
-
-      // Update pagination info
-      if (res.audit_logs_pagination) {
-        setPagination(prev => ({
-          ...prev,
-          current: res.audit_logs_pagination.current_page,
-          total: res.audit_logs_pagination.total
-        }))
-      }
-    } else {
-      message.error(res?.errors?.message || 'មិនអាចទាញយកទិន្នន័យស្ថិតិបានទេ')
+    } catch (err) {
+      console.error("Error fetching dashboard:", err)
+      message.error("មានបញ្ហាក្នុងការទាញទិន្នន័យ")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -145,7 +137,11 @@ const ProfileAccountingPage = () => {
       key: 'action',
       render: text => <Text strong>{text}</Text>
     },
-    { title: 'ទិន្នន័យ', dataIndex: 'target', key: 'target' },
+    { 
+      title: 'ទិន្នន័យ', 
+      dataIndex: 'target', 
+      key: 'target' 
+    },
     {
       title: 'កាលបរិច្ឆេទ',
       dataIndex: 'time',
@@ -202,25 +198,21 @@ const ProfileAccountingPage = () => {
 
               <p className='text-slate-500 m-0'>
                 {profile?.role?.name || 'Senior Accountant'} •{' '}
-                {
-                  profile?.branch?.name || 'មិនទាន់មានសាខា'
-                }
+                {profile?.branch?.name || 'មិនទាន់មានសាខា'}
               </p>
 
               <div className='mt-3 flex flex-wrap justify-center md:justify-start gap-4 text-slate-400 text-xs'>
                 <span>
                   <MailOutlined /> {profile?.email || '—'}
                 </span>
-
                 <span>
                   <PhoneOutlined /> {profile?.phone || '—'}
                 </span>
-
                 <span>ID: {profile?.id || '—'}</span>
               </div>
             </div>
 
-            <Link Link to='/profile-settings'>
+            <Link to='/profile-settings'>
               <Button
                 type='primary'
                 ghost
@@ -246,10 +238,8 @@ const ProfileAccountingPage = () => {
                     <p className='text-slate-400 text-[11px] font-bold uppercase mb-1'>
                       {item.label}
                     </p>
-
                     <h2 className='text-xl font-bold m-0'>{item.value}</h2>
                   </div>
-
                   <div className={`p-2 rounded-lg ${item.bg} ${item.color}`}>
                     {item.icon}
                   </div>
@@ -285,7 +275,7 @@ const ProfileAccountingPage = () => {
                 size='small'
                 loading={loading}
                 locale={{ emptyText: 'មិនទាន់មានសកម្មភាពនៅឡើយទេ' }}
-                rowKey={(record, index) => index}
+                rowKey='id'
               />
             </Card>
           </Col>
@@ -304,11 +294,8 @@ const ProfileAccountingPage = () => {
                 <div>
                   <div className='flex justify-between text-xs mb-2'>
                     <span>ចំណាយរដ្ឋបាល (OPEX)</span>
-                    <span className='font-bold'>
-                      {dashboardData.opexPercent}%
-                    </span>
+                    <span className='font-bold'>{dashboardData.opexPercent}%</span>
                   </div>
-
                   <Progress
                     percent={dashboardData.opexPercent}
                     strokeColor='#6366f1'
@@ -320,11 +307,8 @@ const ProfileAccountingPage = () => {
                 <div>
                   <div className='flex justify-between text-xs mb-2'>
                     <span>ប្រាក់បៀវត្សបុគ្គលិក</span>
-                    <span className='font-bold'>
-                      {dashboardData.salaryPercent}%
-                    </span>
+                    <span className='font-bold'>{dashboardData.salaryPercent}%</span>
                   </div>
-
                   <Progress
                     percent={dashboardData.salaryPercent}
                     strokeColor='#10b981'
@@ -339,14 +323,13 @@ const ProfileAccountingPage = () => {
                   <h4 className='text-xs font-bold text-indigo-700 mb-2'>
                     <SafetyCertificateOutlined /> System Permissions
                   </h4>
-
                   <div className='flex flex-wrap gap-1'>
                     {dashboardData.permissions.map((p, index) => (
                       <Tag
                         key={index}
                         className='text-[10px] bg-white border-indigo-100 text-indigo-600'
                       >
-                        {p}
+                        {p?.name || p}
                       </Tag>
                     ))}
                   </div>

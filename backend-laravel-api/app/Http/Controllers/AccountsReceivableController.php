@@ -6,8 +6,10 @@ use App\Http\Requests\AccountsReceivableRequest;
 use App\Models\Customer;
 use App\Services\AccountsReceivableService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AccountsReceivableController extends Controller
+class AccountsReceivableController extends Controller implements HasMiddleware
 {
     protected $arService;
 
@@ -16,16 +18,30 @@ class AccountsReceivableController extends Controller
         $this->arService = $arService;
     }
 
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:accounts_receivable.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:accounts_receivable.create', only: ['store']),
+            new Middleware('permission:accounts_receivable.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:accounts_receivable.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
+
     // LIST
     public function index(Request $request)
     {
         $paginator = $this->arService->getAll($request);
 
-        return response()->json([
-            'list' => $paginator->items(),
-            'total' => $paginator->total(),
-            'customers' => Customer::select('id', 'customer_name')->get(),
-        ]);
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total(),
+            200,
+            'Success',
+            [
+                'customers' => Customer::select('id', 'customer_name')->get()
+            ]
+        );
     }
 
     // STORE
@@ -33,16 +49,14 @@ class AccountsReceivableController extends Controller
     {
         $data = $this->arService->createAR($request->validated());
 
-        return response()->json([
-            'data' => $data,
-            'message' => 'បានបង្កើត Accounts Receivable ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($data, 'បានបង្កើត Accounts Receivable ដោយជោគជ័យ', 201);
     }
 
     // SHOW
     public function show($id)
     {
-        return $this->arService->findById($id);
+        $data = $this->arService->findById($id);
+        return $this->successResponse($data);
     }
 
     // UPDATE
@@ -53,10 +67,7 @@ class AccountsReceivableController extends Controller
             $id
         );
 
-        return response()->json([
-            'data' => $data,
-            'message' => 'បានកែប្រែ Accounts Receivable ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($data, 'បានកែប្រែ Accounts Receivable ដោយជោគជ័យ');
     }
 
     // DELETE
@@ -64,10 +75,7 @@ class AccountsReceivableController extends Controller
     {
         $data = $this->arService->deleteAR($id);
 
-        return response()->json([
-            'data' => $data,
-            'message' => 'បានលុប Accounts Receivable ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($data, 'បានលុប Accounts Receivable ដោយជោគជ័យ');
     }
 
     // CHANGE STATUS
@@ -82,10 +90,7 @@ class AccountsReceivableController extends Controller
             $request->status
         );
 
-        return response()->json([
-            'data' => $data,
-            'message' => 'បានប្តូរស្ថានភាពដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($data, 'បានប្តូរស្ថានភាពដោយជោគជ័យ');
     }
 
     // BULK DELETE
@@ -98,9 +103,7 @@ class AccountsReceivableController extends Controller
 
         $this->arService->bulkDelete($request->ids);
 
-        return response()->json([
-            'message' => 'លុបជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបជោគជ័យ');
     }
 
     // DELETE ALL
@@ -108,9 +111,7 @@ class AccountsReceivableController extends Controller
     {
         $this->arService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបទាំងអស់ជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបទាំងអស់ជោគជ័យ');
     }
 
     // STATS

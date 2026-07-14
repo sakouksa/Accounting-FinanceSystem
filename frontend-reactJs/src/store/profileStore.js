@@ -12,10 +12,10 @@ export const profileStore = create(
       access_token: null,
       permissions: [],
 
-      setProfile: (profileParams, permissionsParams) => set({
+      setProfile: (profileParams, permissionsParams) => set(state => ({
         profile: profileParams,
-        permissions: permissionsParams || []
-      }),
+        permissions: permissionsParams !== undefined ? permissionsParams : state.permissions
+      })),
 
       setAccessToken: (params) => set({
         access_token: params

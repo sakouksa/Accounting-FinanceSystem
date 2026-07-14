@@ -178,7 +178,7 @@ function TransactionModal ({ open, setState, editingTransaction, onSuccess }) {
       centered
       width={900}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form layout='vertical' form={form} onFinish={onFinish}>
         <Form.Item name='id' hidden>

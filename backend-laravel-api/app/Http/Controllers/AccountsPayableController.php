@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AccountsPayableRequest;
-use App\Models\AccountsPayable;
 use App\Models\Supplier;
 use App\Services\AccountsPayableService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AccountsPayableController extends Controller
+class AccountsPayableController extends Controller implements HasMiddleware
 {
     protected $accountsPayableService;
 
@@ -17,16 +18,30 @@ class AccountsPayableController extends Controller
         $this->accountsPayableService = $accountsPayableService;
     }
 
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:accounts_payable.read', only: ['index', 'show', 'stats']),
+            new Middleware('permission:accounts_payable.create', only: ['store']),
+            new Middleware('permission:accounts_payable.update', only: ['update', 'changeStatus']),
+            new Middleware('permission:accounts_payable.delete', only: ['destroy', 'bulkDelete', 'deleteAll']),
+        ];
+    }
+
     // LIST
     public function index(Request $request)
     {
         $paginator = $this->accountsPayableService->getAll($request);
 
-        return response()->json([
-            'list' => $paginator->items(),
-            'total' => $paginator->total(),
-            'suppliers' => Supplier::select('id', 'supplier_name')->get(),
-        ]);
+        return $this->paginatedResponse(
+            $paginator->items(),
+            $paginator->total(),
+            200,
+            'Success',
+            [
+                'suppliers' => Supplier::select('id', 'supplier_name')->get()
+            ]
+        );
     }
 
     // STATS
@@ -43,16 +58,14 @@ class AccountsPayableController extends Controller
         $accountsPayable = $this->accountsPayableService
             ->createAccountsPayable($request->validated());
 
-        return response()->json([
-            'data' => $accountsPayable,
-            'message' => 'បានបង្កើតវិក្កយបត្រត្រូវទូទាត់ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($accountsPayable, 'បានបង្កើតវិក្កយបត្រត្រូវទូទាត់ដោយជោគជ័យ', 201);
     }
 
     // SHOW
     public function show($id)
     {
-        return $this->accountsPayableService->findById($id);
+        $accountsPayable = $this->accountsPayableService->findById($id);
+        return $this->successResponse($accountsPayable);
     }
 
     // UPDATE
@@ -61,10 +74,7 @@ class AccountsPayableController extends Controller
         $accountsPayable = $this->accountsPayableService
             ->updateAccountsPayable($request->validated(), $id);
 
-        return response()->json([
-            'data' => $accountsPayable,
-            'message' => 'បានកែប្រែវិក្កយបត្រត្រូវទូទាត់ដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($accountsPayable, 'បានកែប្រែវិក្កយបត្រត្រូវទូទាត់ដោយជោគជ័យ');
     }
 
     // DELETE
@@ -72,50 +82,43 @@ class AccountsPayableController extends Controller
     {
         try {
             $accountsPayable = $this->accountsPayableService->deleteAccountsPayable($id);
-
-            return response()->json([
-                'data' => $accountsPayable,
-                'message' => 'បានលុបវិក្កយបត្រត្រូវទូទាត់ដោយជោគជ័យ',
-            ]);
+            return $this->successResponse($accountsPayable, 'បានលុបវិក្កយបត្រត្រូវទូទាត់ដោយជោគជ័យ');
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 400);
+            return $this->errorResponse('លុបមិនបានជោគជ័យ: '.$e->getMessage(), 400);
         }
     }
 
     // CHANGE STATUS
     public function changeStatus(Request $request, $id)
     {
+        $request->validate([
+            'status' => 'required|in:unpaid,partial,paid',
+        ]);
+
         $accountsPayable = $this->accountsPayableService
             ->changeStatus($id, $request->status);
 
-        return response()->json([
-            'data' => $accountsPayable,
-            'message' => 'បានប្តូរស្ថានភាពដោយជោគជ័យ',
-        ]);
+        return $this->successResponse($accountsPayable, 'បានប្តូរស្ថានភាពដោយជោគជ័យ');
     }
 
     // BULK DELETE
     public function bulkDelete(Request $request)
     {
-        // លុបបានតែវិក្កយបត្រណាដែលមិនទាន់មានការបង់ប្រាក់ (paid_amount == 0)
-        AccountsPayable::whereIn('id', $request->ids)
-            ->where('paid_amount', 0)
-            ->delete();
-
-        return response()->json([
-            'message' => 'លុបវិក្កយបត្រដែលជ្រើសរើសជោគជ័យ (ប្រព័ន្ធនឹងរំលងវិក្កយបត្រដែលមានទិន្នន័យទូទាត់)',
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:accounts_payable,id',
         ]);
+
+        $this->accountsPayableService->bulkDelete($request->ids);
+
+        return $this->successResponse(null, 'លុបវិក្កយបត្រដែលជ្រើសរើសជោគជ័យ (ប្រព័ន្ធនឹងរំលងវិក្កយបត្រដែលមានទិន្នន័យទូទាត់)');
     }
 
     // DELETE ALL
     public function deleteAll()
     {
-        AccountsPayable::where('paid_amount', 0)->delete();
+        $this->accountsPayableService->deleteAll();
 
-        return response()->json([
-            'message' => 'លុបវិក្កយបត្រទាំងអស់ដែលមិនទាន់ទូទាត់ជោគជ័យ',
-        ]);
+        return $this->successResponse(null, 'លុបវិក្កយបត្រទាំងអស់ដែលមិនទាន់ទូទាត់ជោគជ័យ');
     }
 }

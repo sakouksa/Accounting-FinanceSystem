@@ -158,7 +158,7 @@ function AccountsReceivableModal ({
       centered
       width={900}
       footer={null}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form
         form={form}
